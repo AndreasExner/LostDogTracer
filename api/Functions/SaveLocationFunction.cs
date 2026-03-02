@@ -2,6 +2,7 @@ using System.Text.Json;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using FlyerTracker.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -92,7 +93,7 @@ public class SaveLocationFunction
                     return new BadRequestObjectResult(new { error = "Foto darf maximal 5 MB groß sein" });
 
                 var container = _blobService.GetBlobContainerClient(PhotoContainer);
-                await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
+                await container.CreateIfNotExistsAsync();
 
                 var ext = Path.GetExtension(photo.FileName)?.ToLowerInvariant();
                 if (string.IsNullOrEmpty(ext) || !new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
@@ -107,7 +108,10 @@ public class SaveLocationFunction
                     ContentType = photo.ContentType ?? "image/jpeg"
                 });
 
-                photoUrl = blobClient.Uri.ToString();
+                // Generate a long-lived read-only SAS URL (private container)
+                photoUrl = blobClient.GenerateSasUri(
+                    BlobSasPermissions.Read,
+                    DateTimeOffset.UtcNow.AddYears(5)).ToString();
             }
 
             var tableClient = _tableService.GetTableClient("GPSRecords");
