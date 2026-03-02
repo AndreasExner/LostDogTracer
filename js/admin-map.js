@@ -6,6 +6,8 @@
     const markerCountEl = document.getElementById('markerCount');
     const filterInfoEl = document.getElementById('filterInfo');
     const legendEl = document.getElementById('legend');
+    const toggleCirclesEl = document.getElementById('toggleCircles');
+    const toggleRoutesEl = document.getElementById('toggleRoutes');
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
 
@@ -42,22 +44,63 @@
     // ── Read filter from URL params ──────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
     const filterDog = urlParams.get('lostDog') || '';
-    const sortField = urlParams.get('sort') || '';
 
     // ── Init map ─────────────────────────────────────────────────
-    const map = L.map('map').setView([51.1657, 10.4515], 6); // Deutschland-Mitte
+    const map = L.map('map').setView([51.1657, 10.4515], 6);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Base layers (layer switcher)
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19
-    }).addTo(map);
+    });
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri, Maxar, Earthstar',
+        maxZoom: 19
+    });
+    const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenTopoMap (CC-BY-SA)',
+        maxZoom: 17
+    });
 
+    osmLayer.addTo(map);
+
+    L.control.layers({
+        'Straße': osmLayer,
+        'Satellit': satelliteLayer,
+        'Topographisch': topoLayer
+    }, null, { position: 'topright', collapsed: true }).addTo(map);
+
+    // Scale bar
+    L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+
+    // Marker cluster
     const clusterGroup = L.markerClusterGroup({
         maxClusterRadius: 40,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false
     });
     map.addLayer(clusterGroup);
+
+    // Optional overlay layers
+    const circlesLayer = L.layerGroup();
+    const routesLayer = L.layerGroup();
+
+    // ── Toggle handlers ──────────────────────────────────────────
+    toggleCirclesEl.addEventListener('change', () => {
+        if (toggleCirclesEl.checked) {
+            map.addLayer(circlesLayer);
+        } else {
+            map.removeLayer(circlesLayer);
+        }
+    });
+
+    toggleRoutesEl.addEventListener('change', () => {
+        if (toggleRoutesEl.checked) {
+            map.addLayer(routesLayer);
+        } else {
+            map.removeLayer(routesLayer);
+        }
+    });
 
     // ── Load & display records ───────────────────────────────────
     async function loadAndDisplay() {
@@ -84,12 +127,17 @@
                 return;
             }
 
-            // Add markers
+            // Group records by dog for polylines
+            const dogRecords = {};
+
+            // Add markers + accuracy circles
             const bounds = [];
             records.forEach(r => {
                 if (!r.latitude || !r.longitude) return;
 
                 const color = getDogColor(r.lostDog);
+
+                // ── Marker ──
                 const marker = L.marker([r.latitude, r.longitude], {
                     icon: colorIcon(color)
                 });
@@ -110,6 +158,50 @@
 
                 clusterGroup.addLayer(marker);
                 bounds.push([r.latitude, r.longitude]);
+
+                // ── Accuracy circle ──
+                if (r.accuracy > 0) {
+                    const circle = L.circle([r.latitude, r.longitude], {
+                        radius: r.accuracy,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.08,
+                        weight: 1.5,
+                        opacity: 0.4,
+                        interactive: false
+                    });
+                    circlesLayer.addLayer(circle);
+                }
+
+                // ── Collect for polylines ──
+                if (!dogRecords[r.lostDog]) dogRecords[r.lostDog] = [];
+                dogRecords[r.lostDog].push({
+                    lat: r.latitude,
+                    lng: r.longitude,
+                    time: r.recordedAt || ''
+                });
+            });
+
+            // ── Build polylines per dog (sorted by time) ──
+            Object.entries(dogRecords).forEach(([dog, points]) => {
+                if (points.length < 2) return;
+
+                // Sort chronologically
+                points.sort((a, b) => a.time.localeCompare(b.time));
+                const latlngs = points.map(p => [p.lat, p.lng]);
+                const color = getDogColor(dog);
+
+                const polyline = L.polyline(latlngs, {
+                    color: color,
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: '8 6',
+                    lineJoin: 'round'
+                });
+
+                // Arrow decorations via small direction markers
+                polyline.bindTooltip(`Route: ${escHtml(dog)}`, { sticky: true });
+                routesLayer.addLayer(polyline);
             });
 
             // Build legend

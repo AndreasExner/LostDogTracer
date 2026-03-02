@@ -55,6 +55,30 @@
             border: 2px solid #fff;
             box-shadow: 0 0 3px rgba(0,0,0,.3);
         }
+        .toggle-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            background: #e8e8ed;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        .toggle-badge:has(input:checked) {
+            background: #0071e3;
+            color: #fff;
+        }
+        .toggle-badge input {
+            accent-color: #fff;
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -67,6 +91,12 @@
         <div class="map-info">
             <span class="badge" id="markerCount">0 Standorte</span>
             <span class="badge" id="filterInfo">Alle Hunde</span>
+            <label class="toggle-badge" title="GPS-Genauigkeit als Kreis anzeigen">
+                <input type="checkbox" id="toggleCircles"> Genauigkeit
+            </label>
+            <label class="toggle-badge" title="Laufroute pro Hund anzeigen">
+                <input type="checkbox" id="toggleRoutes"> Routen
+            </label>
         </div>
         <div class="legend" id="legend"></div>
 
