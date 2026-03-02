@@ -14,10 +14,19 @@
             <a href="admin.html" class="back-link">← Admin-Menü</a>
         </div>
 
-        <!-- Toolbar: filter, page-size, actions -->
+        <!-- Toolbar: filter, sort, page-size, actions -->
         <div class="toolbar">
             <select id="filterDog" title="Filter nach Hund">
                 <option value="">Alle Hunde</option>
+            </select>
+
+            <select id="sortField" title="Sortierung">
+                <option value="time-desc" selected>Zeitpunkt ↓ (neueste)</option>
+                <option value="time-asc">Zeitpunkt ↑ (älteste)</option>
+                <option value="name-asc">Name A–Z</option>
+                <option value="name-desc">Name Z–A</option>
+                <option value="dog-asc">Hund A–Z</option>
+                <option value="dog-desc">Hund Z–A</option>
             </select>
 
             <select id="pageSize" title="Einträge pro Seite">
@@ -26,6 +35,7 @@
                 <option value="all">Alle anzeigen</option>
             </select>
 
+            <button class="btn btn-secondary btn-sm" id="showMapBtn">🗺️ Karte</button>
             <button class="btn btn-secondary btn-sm" id="exportCsvBtn">CSV Export</button>
             <button class="btn btn-secondary btn-sm" id="exportExcelBtn">Excel Export</button>
             <button class="btn btn-danger btn-sm" id="deleteSelectedBtn" disabled>Auswahl löschen</button>

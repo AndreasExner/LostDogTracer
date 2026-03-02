@@ -4,12 +4,14 @@
     const API_BASE = FT_AUTH.getApiBase();
 
     const filterDogEl = document.getElementById('filterDog');
+    const sortFieldEl = document.getElementById('sortField');
     const pageSizeEl = document.getElementById('pageSize');
     const selectAllEl = document.getElementById('selectAll');
     const bodyEl = document.getElementById('recordsBody');
     const pageInfoEl = document.getElementById('pageInfo');
     const pageBtnsEl = document.getElementById('pageButtons');
     const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const showMapBtn = document.getElementById('showMapBtn');
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     const toastEl = document.getElementById('toast');
@@ -34,6 +36,7 @@
             if (!res.ok) throw new Error();
             data = await res.json();
             populateFilter(data.lostDogs);
+            sortRecords();
             renderTable();
             renderPagination();
             updateDeleteButton();
@@ -251,8 +254,37 @@
         URL.revokeObjectURL(a.href);
     }
 
+    // ── Sorting ──────────────────────────────────────────────────
+    function sortRecords() {
+        const sort = sortFieldEl.value;
+        const locale = 'de';
+        data.records.sort((a, b) => {
+            switch (sort) {
+                case 'name-asc':  return (a.name || '').localeCompare(b.name || '', locale);
+                case 'name-desc': return (b.name || '').localeCompare(a.name || '', locale);
+                case 'dog-asc':   return (a.lostDog || '').localeCompare(b.lostDog || '', locale);
+                case 'dog-desc':  return (b.lostDog || '').localeCompare(a.lostDog || '', locale);
+                case 'time-asc':  return (a.recordedAt || '').localeCompare(b.recordedAt || '');
+                case 'time-desc': return (b.recordedAt || '').localeCompare(a.recordedAt || '');
+                default:          return 0;
+            }
+        });
+    }
+
+    // ── Map button ───────────────────────────────────────────────
+    showMapBtn.addEventListener('click', () => {
+        const params = new URLSearchParams();
+        const dog = filterDogEl.value;
+        if (dog) params.set('lostDog', dog);
+        const sort = sortFieldEl.value;
+        if (sort) params.set('sort', sort);
+        const qs = params.toString();
+        window.location.href = 'admin-map.html' + (qs ? '?' + qs : '');
+    });
+
     // ── Events ───────────────────────────────────────────────────
     filterDogEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
+    sortFieldEl.addEventListener('change', () => { sortRecords(); renderTable(); });
     pageSizeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
 
     // ── Helpers ──────────────────────────────────────────────────

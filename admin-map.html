@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>FlyerTracker – Karte</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+    <style>
+        #map {
+            width: 100%;
+            height: calc(100vh - 120px);
+            border-radius: 12px;
+            border: 1px solid #d2d2d7;
+            margin-top: 0.75rem;
+        }
+        .map-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #6e6e73;
+        }
+        .map-info .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            background: #e8e8ed;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #1d1d1f;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.8125rem;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 3px rgba(0,0,0,.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container" style="max-width: 1200px;">
+        <div class="admin-header">
+            <h1>📍 Karte</h1>
+            <a href="admin-gpsrecords.html" class="back-link">← GPS-Daten</a>
+        </div>
+
+        <div class="map-info">
+            <span class="badge" id="markerCount">0 Standorte</span>
+            <span class="badge" id="filterInfo">Alle Hunde</span>
+        </div>
+        <div class="legend" id="legend"></div>
+
+        <div id="map"></div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'admin.html'; });
+    </script>
+    <script src="js/admin-map.js"></script>
+</body>
+</html>
