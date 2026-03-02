@@ -2,6 +2,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using FlyerTracker.Api.Security;
 
 var host = new HostBuilder()
@@ -12,6 +13,7 @@ var host = new HostBuilder()
             ?? "UseDevelopmentStorage=true";
 
         services.AddSingleton(new TableServiceClient(connectionString));
+        services.AddSingleton(new BlobServiceClient(connectionString));
 
         // ── Security services ────────────────────────────────────
         // API Key — protects all endpoints against scanners

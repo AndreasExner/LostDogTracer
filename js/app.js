@@ -12,8 +12,91 @@
     const lostDogEl = document.getElementById('lostDog');
     const saveBtnEl = document.getElementById('saveBtn');
     const toastEl = document.getElementById('toast');
+    const photoBtnEl = document.getElementById('photoBtn');
+    const photoInputEl = document.getElementById('photoInput');
+    const photoPreviewEl = document.getElementById('photoPreview');
+    const previewImgEl = document.getElementById('previewImg');
+    const removePhotoBtnEl = document.getElementById('removePhotoBtn');
 
     let toastTimeout = null;
+    let selectedPhotoBlob = null; // compressed Blob ready for upload
+
+    // ── Initialisation ───────────────────────────────────────────────
+    async function init() {
+        await Promise.all([loadNames(), loadLostDogs()]);
+        restoreSelections();
+        updateButtonState();
+
+        userNameEl.addEventListener('change', onSelectionChange);
+        lostDogEl.addEventListener('change', onSelectionChange);
+        saveBtnEl.addEventListener('click', onSaveLocation);
+
+        // Photo handling
+        photoBtnEl.addEventListener('click', () => photoInputEl.click());
+        photoInputEl.addEventListener('change', onPhotoSelected);
+        removePhotoBtnEl.addEventListener('click', removePhoto);
+    }
+
+    // ── Photo handling ───────────────────────────────────────────────
+    async function onPhotoSelected() {
+        const file = photoInputEl.files[0];
+        if (!file) return;
+
+        // Show preview immediately with original
+        previewImgEl.src = URL.createObjectURL(file);
+        photoPreviewEl.classList.remove('hidden');
+        photoBtnEl.textContent = '📷 Foto ändern';
+
+        // Compress in background
+        try {
+            selectedPhotoBlob = await compressImage(file, 1200, 0.8);
+        } catch {
+            // Fallback: use original file
+            selectedPhotoBlob = file;
+        }
+    }
+
+    function removePhoto() {
+        selectedPhotoBlob = null;
+        photoInputEl.value = '';
+        photoPreviewEl.classList.add('hidden');
+        photoBtnEl.textContent = '📷 Foto hinzufügen (optional)';
+        if (previewImgEl.src.startsWith('blob:')) {
+            URL.revokeObjectURL(previewImgEl.src);
+        }
+        previewImgEl.src = '';
+    }
+
+    /**
+     * Compress an image file using canvas.
+     * Resizes to maxDim (longest side) and converts to JPEG at given quality.
+     * Returns a Blob.
+     */
+    function compressImage(file, maxDim, quality) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Canvas toBlob failed'));
+                }, 'image/jpeg', quality);
+                URL.revokeObjectURL(img.src);
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    }
 
     // ── Initialisation ───────────────────────────────────────────────
     async function init() {
@@ -98,24 +181,45 @@
 
         try {
             const position = await getCurrentPosition();
-            const payload = {
-                name: userNameEl.value,
-                lostDog: lostDogEl.value,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: new Date().toISOString()
-            };
 
-            const res = await fetch(`${API_BASE}/save-location`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-                body: JSON.stringify(payload)
-            });
+            if (selectedPhotoBlob) {
+                // ── Multipart upload (with photo) ──
+                const fd = new FormData();
+                fd.append('name', userNameEl.value);
+                fd.append('lostDog', lostDogEl.value);
+                fd.append('latitude', position.coords.latitude.toString());
+                fd.append('longitude', position.coords.longitude.toString());
+                fd.append('accuracy', position.coords.accuracy.toString());
+                fd.append('timestamp', new Date().toISOString());
+                fd.append('photo', selectedPhotoBlob, 'photo.jpg');
 
-            if (!res.ok) throw new Error('Speichern fehlgeschlagen');
+                const res = await fetch(`${API_BASE}/save-location`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': API_KEY },
+                    body: fd
+                });
+                if (!res.ok) throw new Error('Speichern fehlgeschlagen');
+            } else {
+                // ── JSON upload (no photo, backward compatible) ──
+                const payload = {
+                    name: userNameEl.value,
+                    lostDog: lostDogEl.value,
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    timestamp: new Date().toISOString()
+                };
+
+                const res = await fetch(`${API_BASE}/save-location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Speichern fehlgeschlagen');
+            }
 
             showToast('Standort gespeichert ✓');
+            removePhoto(); // reset photo after successful save
         } catch (err) {
             console.error(err);
             if (err.code === 1) {

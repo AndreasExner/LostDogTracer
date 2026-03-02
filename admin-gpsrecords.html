@@ -39,6 +39,7 @@
                         <th><input type="checkbox" id="selectAll" title="Alle auswählen"></th>
                         <th>Name</th>
                         <th>Hund</th>
+                        <th>Foto</th>
                         <th>Breitengrad</th>
                         <th>Längengrad</th>
                         <th>Genauigkeit</th>
@@ -56,6 +57,11 @@
         </div>
 
         <div id="toast" class="toast hidden"></div>
+
+        <!-- Photo lightbox -->
+        <div id="lightbox" class="lightbox hidden" onclick="this.classList.add('hidden')">
+            <img id="lightboxImg" alt="Foto">
+        </div>
     </div>
     <script src="js/auth.js"></script>
     <script>

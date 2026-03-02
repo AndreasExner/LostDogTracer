@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using FlyerTracker.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,15 +11,18 @@ namespace FlyerTracker.Api.Functions;
 
 public class GPSRecordsFunction
 {
+    private const string PhotoContainer = "photos";
     private readonly TableServiceClient _tableService;
+    private readonly BlobServiceClient _blobService;
     private readonly ILogger<GPSRecordsFunction> _logger;
     private readonly ApiKeyValidator _apiKey;
     private readonly AdminAuth _adminAuth;
 
-    public GPSRecordsFunction(TableServiceClient tableService, ILogger<GPSRecordsFunction> logger,
-        ApiKeyValidator apiKey, AdminAuth adminAuth)
+    public GPSRecordsFunction(TableServiceClient tableService, BlobServiceClient blobService,
+        ILogger<GPSRecordsFunction> logger, ApiKeyValidator apiKey, AdminAuth adminAuth)
     {
         _tableService = tableService;
+        _blobService = blobService;
         _logger = logger;
         _apiKey = apiKey;
         _adminAuth = adminAuth;
@@ -60,7 +64,8 @@ public class GPSRecordsFunction
                     latitude = entity.GetDouble("Latitude") ?? 0,
                     longitude = entity.GetDouble("Longitude") ?? 0,
                     accuracy = entity.GetDouble("Accuracy") ?? 0,
-                    recordedAt = entity.GetString("RecordedAt") ?? entity.Timestamp?.ToString("o") ?? ""
+                    recordedAt = entity.GetString("RecordedAt") ?? entity.Timestamp?.ToString("o") ?? "",
+                    photoUrl = entity.GetString("PhotoUrl") ?? ""
                 });
             }
 
@@ -119,12 +124,29 @@ public class GPSRecordsFunction
                 return new BadRequestObjectResult(new { error = "Keine Einträge zum Löschen" });
 
             var tableClient = _tableService.GetTableClient("GPSRecords");
+            var container = _blobService.GetBlobContainerClient(PhotoContainer);
             int deleted = 0;
 
             foreach (var key in body)
             {
                 try
                 {
+                    // Try to read entity first to get PhotoUrl
+                    try
+                    {
+                        var entity = await tableClient.GetEntityAsync<TableEntity>(key.PartitionKey, key.RowKey);
+                        var photoUrl = entity.Value.GetString("PhotoUrl");
+                        if (!string.IsNullOrEmpty(photoUrl))
+                        {
+                            // Extract blob name from URL: {container}/{name}/{rowKey}.ext
+                            var uri = new Uri(photoUrl);
+                            var blobName = string.Join("/", uri.Segments.Skip(2)).TrimStart('/');
+                            try { await container.DeleteBlobIfExistsAsync(blobName); }
+                            catch { /* best effort */ }
+                        }
+                    }
+                    catch { /* entity may already be gone */ }
+
                     await tableClient.DeleteEntityAsync(key.PartitionKey, key.RowKey);
                     deleted++;
                 }

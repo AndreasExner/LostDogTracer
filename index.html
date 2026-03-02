@@ -26,6 +26,16 @@
             </select>
         </div>
 
+        <!-- Optional photo -->
+        <div class="photo-section">
+            <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+            <button type="button" id="photoBtn" class="btn-photo">📷 Foto hinzufügen (optional)</button>
+            <div id="photoPreview" class="photo-preview hidden">
+                <img id="previewImg" alt="Vorschau">
+                <button type="button" id="removePhotoBtn" class="btn-remove-photo">✕</button>
+            </div>
+        </div>
+
         <div class="spacer"></div>
 
         <button id="saveBtn" class="btn-save" disabled>STANDORT SPEICHERN</button>

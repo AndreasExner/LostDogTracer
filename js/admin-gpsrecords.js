@@ -20,7 +20,7 @@
 
     // ── Load records ─────────────────────────────────────────────
     async function loadRecords() {
-        bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
+        bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
         const ps = pageSizeEl.value;
         const dog = filterDogEl.value;
         const params = new URLSearchParams();
@@ -38,7 +38,7 @@
             renderPagination();
             updateDeleteButton();
         } catch {
-            bodyEl.innerHTML = '<tr><td colspan="7" style="color:#ff3b30;text-align:center;padding:2rem">Fehler beim Laden</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#ff3b30;text-align:center;padding:2rem">Fehler beim Laden</td></tr>';
         }
     }
 
@@ -61,16 +61,20 @@
         selectAllEl.checked = false;
 
         if (data.records.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
             return;
         }
 
         data.records.forEach(r => {
             const tr = document.createElement('tr');
+            const photoCell = r.photoUrl
+                ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
+                : '<td class="no-photo">—</td>';
             tr.innerHTML = `
                 <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
                 <td>${esc(r.name)}</td>
                 <td>${esc(r.lostDog)}</td>
+                ${photoCell}
                 <td>${r.latitude.toFixed(6)}</td>
                 <td>${r.longitude.toFixed(6)}</td>
                 <td>${r.accuracy.toFixed(1)} m</td>
@@ -179,11 +183,12 @@
                 return;
             }
 
-            const headers = ['Name', 'Hund', 'Breitengrad', 'Längengrad', 'Genauigkeit', 'Zeitpunkt'];
+            const headers = ['Name', 'Hund', 'Breitengrad', 'L\u00e4ngengrad', 'Genauigkeit', 'Zeitpunkt', 'Foto-URL'];
             const rows = allData.records.map(r => [
                 r.name, r.lostDog,
                 r.latitude, r.longitude,
-                r.accuracy, r.recordedAt
+                r.accuracy, r.recordedAt,
+                r.photoUrl || ''
             ]);
 
             if (format === 'csv') {

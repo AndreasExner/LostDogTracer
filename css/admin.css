@@ -249,3 +249,41 @@ html, body {
     .toolbar { flex-direction: column; align-items: stretch; }
     .toolbar select, .toolbar .btn { width: 100%; }
 }
+
+/* ── Photo thumbnails ────────────────────────────────────────── */
+.thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.thumb:hover {
+    transform: scale(1.15);
+}
+.no-photo {
+    color: #a1a1a6;
+    text-align: center;
+}
+
+/* ── Lightbox overlay ────────────────────────────────────────── */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    cursor: pointer;
+}
+.lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.lightbox.hidden {
+    display: none;
+}
