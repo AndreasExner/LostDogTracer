@@ -197,14 +197,20 @@
                     ? `<br><img src="${escHtml(r.photoUrl)}" style="max-width:180px;max-height:120px;border-radius:6px;margin-top:6px;" alt="Foto">`
                     : '';
 
+                const navHtml = `<div class="nav-chooser">` +
+                    `<a class="nav-google" href="https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}" target="_blank" rel="noopener">Google Maps</a>` +
+                    `<a class="nav-apple" href="https://maps.apple.com/?daddr=${r.latitude},${r.longitude}" target="_blank" rel="noopener">Apple Maps</a>` +
+                    `<a class="nav-waze" href="https://waze.com/ul?ll=${r.latitude},${r.longitude}&navigate=yes" target="_blank" rel="noopener">Waze</a>` +
+                    `</div>`;
+
                 marker.bindPopup(
                     `<strong>${escHtml(r.name)}</strong><br>` +
                     `🐕 ${escHtml(r.lostDog)}<br>` +
                     `📍 ${r.latitude.toFixed(6)}, ${r.longitude.toFixed(6)}<br>` +
                     `🎯 ±${r.accuracy.toFixed(0)} m<br>` +
                     `🕐 ${formatDate(r.recordedAt)}` +
-                    photoHtml,
-                    { maxWidth: 260 }
+                    photoHtml + navHtml,
+                    { maxWidth: 280 }
                 );
 
                 clusterGroup.addLayer(marker);

@@ -94,6 +94,29 @@
             height: 1rem;
             cursor: pointer;
         }
+        /* Navigation chooser in popup */
+        .nav-chooser {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .nav-chooser a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #fff;
+            transition: opacity 0.2s;
+        }
+        .nav-chooser a:hover { opacity: 0.85; }
+        .nav-google { background: #4285F4; }
+        .nav-apple  { background: #333; }
+        .nav-waze   { background: #33ccff; color: #000 !important; }
     </style>
 </head>
 <body>
