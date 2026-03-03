@@ -63,12 +63,20 @@
         maxZoom: 17
     });
 
+    // Google Maps layers (via GoogleMutant)
+    const googleRoads = L.gridLayer.googleMutant({ type: 'roadmap', maxZoom: 21 });
+    const googleSat   = L.gridLayer.googleMutant({ type: 'satellite', maxZoom: 21 });
+    const googleHybrid = L.gridLayer.googleMutant({ type: 'hybrid', maxZoom: 21 });
+
     osmLayer.addTo(map);
 
     L.control.layers({
-        'Straße': osmLayer,
-        'Satellit': satelliteLayer,
-        'Topographisch': topoLayer
+        'OSM Straße': osmLayer,
+        'OSM Topographisch': topoLayer,
+        'Esri Satellit': satelliteLayer,
+        'Google Straße': googleRoads,
+        'Google Satellit': googleSat,
+        'Google Hybrid': googleHybrid
     }, null, { position: 'topright', collapsed: true }).addTo(map);
 
     // Scale bar
