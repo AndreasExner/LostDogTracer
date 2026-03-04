@@ -106,6 +106,51 @@ select.form-control {
     pointer-events: none;
 }
 
+/* Action row (Bearbeiten / Karte) */
+.action-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    color: #fff;
+}
+
+.btn-action:active {
+    transform: scale(0.97);
+}
+
+.btn-action:disabled {
+    background: #a1a1a6;
+    cursor: not-allowed;
+}
+
+.btn-edit {
+    background: #ff3b30;
+}
+
+.btn-edit:active:not(:disabled) {
+    background: #d32f2f;
+}
+
+.btn-map {
+    background: #0071e3;
+}
+
+.btn-map:active:not(:disabled) {
+    background: #005bb5;
+}
+
 /* Toast notification */
 .toast {
     position: fixed;

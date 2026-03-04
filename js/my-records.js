@@ -1,0 +1,203 @@
+(function () {
+    'use strict';
+
+    const API_BASE = FT_AUTH.getApiBase();
+
+    const sortFieldEl = document.getElementById('sortField');
+    const pageSizeEl = document.getElementById('pageSize');
+    const selectAllEl = document.getElementById('selectAll');
+    const bodyEl = document.getElementById('recordsBody');
+    const pageInfoEl = document.getElementById('pageInfo');
+    const pageBtnsEl = document.getElementById('pageButtons');
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const filterInfoEl = document.getElementById('filterInfo');
+    const toastEl = document.getElementById('toast');
+    let toastTimeout = null;
+
+    // Read name + lostDog from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterName = urlParams.get('name') || '';
+    const filterDog = urlParams.get('lostDog') || '';
+
+    if (!filterName || !filterDog) {
+        filterInfoEl.textContent = '⚠️ Kein Name/Hund ausgewählt';
+        bodyEl.innerHTML = '<tr><td colspan="8" style="color:#ff3b30;text-align:center;padding:2rem">Bitte zuerst Name und Hund auf der Startseite auswählen.</td></tr>';
+        // Disable interactions
+        sortFieldEl.disabled = true;
+        pageSizeEl.disabled = true;
+    } else {
+        filterInfoEl.textContent = `${filterName} / ${filterDog}`;
+        init();
+    }
+
+    let currentPage = 1;
+    let data = { records: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 1 };
+
+    function init() {
+        sortFieldEl.addEventListener('change', () => { sortRecords(); renderTable(); });
+        pageSizeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
+        selectAllEl.addEventListener('change', () => {
+            document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = selectAllEl.checked; });
+            updateDeleteButton();
+        });
+        bodyEl.addEventListener('change', e => {
+            if (e.target.classList.contains('row-cb')) updateDeleteButton();
+        });
+        deleteBtn.addEventListener('click', deleteSelected);
+        loadRecords();
+    }
+
+    // ── Load records ─────────────────────────────────────────────
+    async function loadRecords() {
+        bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
+        const ps = pageSizeEl.value;
+        const params = new URLSearchParams();
+        params.set('pageSize', ps);
+        params.set('page', currentPage);
+        params.set('name', filterName);
+        params.set('lostDog', filterDog);
+
+        try {
+            const res = await fetch(`${API_BASE}/my-records?${params}`, {
+                headers: FT_AUTH.publicHeaders()
+            });
+            if (!res.ok) throw new Error();
+            data = await res.json();
+            sortRecords();
+            renderTable();
+            renderPagination();
+            updateDeleteButton();
+        } catch {
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#ff3b30;text-align:center;padding:2rem">Fehler beim Laden</td></tr>';
+        }
+    }
+
+    // ── Render table ─────────────────────────────────────────────
+    function renderTable() {
+        bodyEl.innerHTML = '';
+        selectAllEl.checked = false;
+
+        if (data.records.length === 0) {
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+            return;
+        }
+
+        data.records.forEach(r => {
+            const tr = document.createElement('tr');
+            const photoCell = r.photoUrl
+                ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
+                : '<td class="no-photo">—</td>';
+            tr.innerHTML = `
+                <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
+                <td>${esc(r.category || '')}</td>
+                <td>${esc(r.comment || '')}</td>
+                ${photoCell}
+                <td>${r.latitude.toFixed(6)}</td>
+                <td>${r.longitude.toFixed(6)}</td>
+                <td>${r.accuracy.toFixed(1)} m</td>
+                <td>${formatDate(r.recordedAt)}</td>`;
+            bodyEl.appendChild(tr);
+        });
+    }
+
+    // ── Pagination ───────────────────────────────────────────────
+    function renderPagination() {
+        pageInfoEl.textContent = `${data.totalCount} Einträge — Seite ${data.page} von ${data.totalPages}`;
+        pageBtnsEl.innerHTML = '';
+
+        if (data.totalPages <= 1) return;
+
+        const addBtn = (label, page, disabled, active) => {
+            const b = document.createElement('button');
+            b.textContent = label;
+            b.disabled = disabled;
+            if (active) b.classList.add('active');
+            b.addEventListener('click', () => { currentPage = page; loadRecords(); });
+            pageBtnsEl.appendChild(b);
+        };
+
+        addBtn('«', 1, currentPage === 1, false);
+        addBtn('‹', currentPage - 1, currentPage === 1, false);
+
+        let start = Math.max(1, currentPage - 2);
+        let end = Math.min(data.totalPages, start + 4);
+        start = Math.max(1, end - 4);
+
+        for (let i = start; i <= end; i++) {
+            addBtn(String(i), i, false, i === currentPage);
+        }
+
+        addBtn('›', currentPage + 1, currentPage >= data.totalPages, false);
+        addBtn('»', data.totalPages, currentPage >= data.totalPages, false);
+    }
+
+    // ── Select / delete ──────────────────────────────────────────
+    function getSelected() {
+        return [...document.querySelectorAll('.row-cb:checked')].map(cb => ({
+            partitionKey: cb.dataset.pk,
+            rowKey: cb.dataset.rk
+        }));
+    }
+
+    function updateDeleteButton() {
+        const n = getSelected().length;
+        deleteBtn.disabled = n === 0;
+        deleteBtn.textContent = n > 0 ? `Ausgewählte löschen (${n})` : 'Ausgewählte löschen';
+    }
+
+    async function deleteSelected() {
+        const sel = getSelected();
+        if (sel.length === 0) return;
+        if (!confirm(`${sel.length} Einträge wirklich löschen?`)) return;
+
+        deleteBtn.disabled = true;
+        try {
+            const res = await fetch(`${API_BASE}/my-records/delete`, {
+                method: 'POST',
+                headers: FT_AUTH.publicHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ name: filterName, lostDog: filterDog, keys: sel })
+            });
+            if (!res.ok) throw new Error();
+            const result = await res.json();
+            showToast(`${result.deleted} Einträge gelöscht`);
+            await loadRecords();
+        } catch {
+            showToast('Fehler beim Löschen', true);
+        }
+    }
+
+    // ── Sorting ──────────────────────────────────────────────────
+    function sortRecords() {
+        const sort = sortFieldEl.value;
+        data.records.sort((a, b) => {
+            switch (sort) {
+                case 'time-asc':  return (a.recordedAt || '').localeCompare(b.recordedAt || '');
+                case 'time-desc': return (b.recordedAt || '').localeCompare(a.recordedAt || '');
+                default:          return 0;
+            }
+        });
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+    function formatDate(iso) {
+        if (!iso) return '—';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        } catch { return iso; }
+    }
+    function showToast(msg, isError) {
+        clearTimeout(toastTimeout);
+        toastEl.textContent = msg;
+        toastEl.className = 'toast' + (isError ? ' error' : '');
+        toastTimeout = setTimeout(() => toastEl.classList.add('hidden'), 2500);
+    }
+})();

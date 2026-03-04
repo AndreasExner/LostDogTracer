@@ -20,6 +20,8 @@
     const photoPreviewEl = document.getElementById('photoPreview');
     const previewImgEl = document.getElementById('previewImg');
     const removePhotoBtnEl = document.getElementById('removePhotoBtn');
+    const editBtnEl = document.getElementById('editBtn');
+    const mapBtnEl = document.getElementById('mapBtn');
 
     let toastTimeout = null;
     let selectedPhotoBlob = null; // compressed Blob ready for upload
@@ -34,6 +36,10 @@
         lostDogEl.addEventListener('change', onSelectionChange);
         categoryEl.addEventListener('change', onSelectionChange);
         saveBtnEl.addEventListener('click', onSaveLocation);
+
+        // Edit / Map buttons
+        editBtnEl.addEventListener('click', onEditRecords);
+        mapBtnEl.addEventListener('click', onShowMap);
 
         // Photo handling
         photoBtnEl.addEventListener('click', () => photoInputEl.click());
@@ -186,6 +192,23 @@
 
     function updateButtonState() {
         saveBtnEl.disabled = !(userNameEl.value && lostDogEl.value && categoryEl.value);
+        const hasNameAndDog = !!(userNameEl.value && lostDogEl.value);
+        editBtnEl.disabled = !hasNameAndDog;
+        mapBtnEl.disabled = !hasNameAndDog;
+    }
+
+    function onEditRecords() {
+        const params = new URLSearchParams();
+        params.set('name', userNameEl.value);
+        params.set('lostDog', lostDogEl.value);
+        window.location.href = 'my-records.html?' + params;
+    }
+
+    function onShowMap() {
+        const params = new URLSearchParams();
+        params.set('name', userNameEl.value);
+        params.set('lostDog', lostDogEl.value);
+        window.location.href = 'my-map.html?' + params;
     }
 
     // ── Save GPS location ────────────────────────────────────────────
