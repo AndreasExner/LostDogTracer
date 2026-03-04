@@ -43,6 +43,7 @@ public class GPSRecordsFunction
 
             var lostDogFilter = req.Query["lostDog"].FirstOrDefault();
             var nameFilter = req.Query["name"].FirstOrDefault();
+            var categoryFilter = req.Query["category"].FirstOrDefault();
             var pageSizeStr = req.Query["pageSize"].FirstOrDefault();
             var pageStr = req.Query["page"].FirstOrDefault();
 
@@ -54,9 +55,12 @@ public class GPSRecordsFunction
             {
                 var lostDog = entity.GetString("LostDog") ?? "";
                 var name = entity.PartitionKey ?? "";
+                var category = entity.GetString("Category") ?? "";
                 if (!string.IsNullOrEmpty(lostDogFilter) && lostDog != lostDogFilter)
                     continue;
                 if (!string.IsNullOrEmpty(nameFilter) && name != nameFilter)
+                    continue;
+                if (!string.IsNullOrEmpty(categoryFilter) && category != categoryFilter)
                     continue;
 
                 allRecords.Add(new
@@ -91,6 +95,13 @@ public class GPSRecordsFunction
                 .OrderBy(n => n, StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false))
                 .ToList();
 
+            // Get unique categories for filter dropdown
+            var categories = allRecords.Select(r => ((dynamic)r).category as string)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .OrderBy(c => c, StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false))
+                .ToList();
+
             // Paginate
             IEnumerable<object> pagedRecords;
             if (pageSize.HasValue)
@@ -110,7 +121,8 @@ public class GPSRecordsFunction
                 pageSize = pageSize ?? totalCount,
                 totalPages = pageSize.HasValue ? (int)Math.Ceiling((double)totalCount / pageSize.Value) : 1,
                 lostDogs,
-                names
+                names,
+                categories
             });
         }
         catch (Exception ex)

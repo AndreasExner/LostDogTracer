@@ -5,6 +5,7 @@
 
     const filterDogEl = document.getElementById('filterDog');
     const filterNameEl = document.getElementById('filterName');
+    const filterCategoryEl = document.getElementById('filterCategory');
     const sortFieldEl = document.getElementById('sortField');
     const pageSizeEl = document.getElementById('pageSize');
     const selectAllEl = document.getElementById('selectAll');
@@ -27,18 +28,20 @@
         const ps = pageSizeEl.value;
         const dog = filterDogEl.value;
         const name = filterNameEl.value;
+        const cat = filterCategoryEl.value;
         const params = new URLSearchParams();
         params.set('pageSize', ps);
         params.set('page', currentPage);
         if (dog) params.set('lostDog', dog);
         if (name) params.set('name', name);
+        if (cat) params.set('category', cat);
 
         try {
             const res = await fetch(`${API_BASE}/manage/gps-records?${params}`, { headers: FT_AUTH.adminHeaders() });
             if (res.status === 401) { FT_AUTH.logout(); location.href = 'admin.html'; return; }
             if (!res.ok) throw new Error();
             data = await res.json();
-            populateFilter(data.lostDogs, data.names || []);
+            populateFilter(data.lostDogs, data.names || [], data.categories || []);
             sortRecords();
             renderTable();
             renderPagination();
@@ -48,7 +51,7 @@
         }
     }
 
-    function populateFilter(dogs, names) {
+    function populateFilter(dogs, names, categories) {
         const currentDog = filterDogEl.value;
         while (filterDogEl.options.length > 1) filterDogEl.remove(1);
         dogs.forEach(d => {
@@ -68,6 +71,16 @@
             filterNameEl.appendChild(opt);
         });
         filterNameEl.value = currentName;
+
+        const currentCat = filterCategoryEl.value;
+        while (filterCategoryEl.options.length > 1) filterCategoryEl.remove(1);
+        categories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            filterCategoryEl.appendChild(opt);
+        });
+        filterCategoryEl.value = currentCat;
     }
 
     // ── Render table ─────────────────────────────────────────────
@@ -185,10 +198,12 @@
         // Fetch ALL records (no pagination) for export
         const dog = filterDogEl.value;
         const name = filterNameEl.value;
+        const cat = filterCategoryEl.value;
         const params = new URLSearchParams();
         params.set('pageSize', 'all');
         if (dog) params.set('lostDog', dog);
         if (name) params.set('name', name);
+        if (cat) params.set('category', cat);
 
         try {
             showToast('Exportiere…');
@@ -243,10 +258,12 @@
     async function exportKml() {
         const dog = filterDogEl.value;
         const name = filterNameEl.value;
+        const cat = filterCategoryEl.value;
         const params = new URLSearchParams();
         params.set('pageSize', 'all');
         if (dog) params.set('lostDog', dog);
         if (name) params.set('name', name);
+        if (cat) params.set('category', cat);
 
         try {
             showToast('KML wird erstellt…');
@@ -360,8 +377,10 @@
         const params = new URLSearchParams();
         const dog = filterDogEl.value;
         const name = filterNameEl.value;
+        const cat = filterCategoryEl.value;
         if (dog) params.set('lostDog', dog);
         if (name) params.set('name', name);
+        if (cat) params.set('category', cat);
         const sort = sortFieldEl.value;
         if (sort) params.set('sort', sort);
         const qs = params.toString();
@@ -371,6 +390,7 @@
     // ── Events ───────────────────────────────────────────────────
     filterDogEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
     filterNameEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
+    filterCategoryEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
     sortFieldEl.addEventListener('change', () => { sortRecords(); renderTable(); });
     pageSizeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
 

@@ -6,6 +6,7 @@
     const markerCountEl = document.getElementById('markerCount');
     const filterDogEl = document.getElementById('filterDog');
     const filterNameEl = document.getElementById('filterName');
+    const filterCategoryEl = document.getElementById('filterCategory');
     const legendEl = document.getElementById('legend');
     const toggleCirclesEl = document.getElementById('toggleCircles');
     const toggleRoutesEl = document.getElementById('toggleRoutes');
@@ -46,8 +47,10 @@
     const urlParams = new URLSearchParams(window.location.search);
     let filterDog = urlParams.get('lostDog') || '';
     let filterName = urlParams.get('name') || '';
+    let filterCategory = urlParams.get('category') || '';
     if (filterDog) filterDogEl.value = filterDog;
     if (filterName) filterNameEl.value = filterName;
+    if (filterCategory) filterCategoryEl.value = filterCategory;
 
     // ── Init map ─────────────────────────────────────────────────
     const map = L.map('map').setView([51.1657, 10.4515], 6);
@@ -101,6 +104,7 @@
     function onFilterChange() {
         filterDog = filterDogEl.value;
         filterName = filterNameEl.value;
+        filterCategory = filterCategoryEl.value;
         // Reset color mapping for consistency
         Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
         colorIdx = 0;
@@ -113,6 +117,7 @@
     }
     filterDogEl.addEventListener('change', onFilterChange);
     filterNameEl.addEventListener('change', onFilterChange);
+    filterCategoryEl.addEventListener('change', onFilterChange);
 
     // ── Toggle handlers ──────────────────────────────────────────
     toggleCirclesEl.addEventListener('change', () => {
@@ -138,6 +143,7 @@
             params.set('pageSize', 'all');
             if (filterDog) params.set('lostDog', filterDog);
             if (filterName) params.set('name', filterName);
+            if (filterCategory) params.set('category', filterCategory);
 
             const res = await fetch(`${API_BASE}/manage/gps-records?${params}`, {
                 headers: FT_AUTH.adminHeaders()
@@ -172,6 +178,17 @@
                 filterNameEl.appendChild(opt);
             });
             filterNameEl.value = currentNameVal;
+
+            // Populate category filter dropdown (keep current selection)
+            const currentCats = data.categories || [];
+            const currentCatVal = filterCategoryEl.value;
+            while (filterCategoryEl.options.length > 1) filterCategoryEl.remove(1);
+            currentCats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                filterCategoryEl.appendChild(opt);
+            });
+            filterCategoryEl.value = currentCatVal;
 
             if (records.length === 0) {
                 showToast('Keine GPS-Daten vorhanden', true);
