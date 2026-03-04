@@ -35,6 +35,38 @@ html, body {
 }
 .back-link:hover { text-decoration: underline; }
 
+/* ── Site banner ──────────────────────────────────────────────── */
+.site-banner {
+    background: #1d1d1f;
+    color: #fff;
+    text-align: center;
+    padding: 0.3rem 1rem;
+    font-size: clamp(0.6rem, 2.5vw, 0.875rem);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+}
+
+/* ── Zurück button ───────────────────────────────────────────── */
+.btn-back {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #0071e3;
+    background: #e8e8ed;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-back:hover {
+    background: #d2d2d7;
+}
+
 /* ── Menu cards ──────────────────────────────────────────────── */
 .menu-grid {
     display: grid;

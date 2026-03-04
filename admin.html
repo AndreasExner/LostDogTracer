@@ -32,6 +32,7 @@
     </style>
 </head>
 <body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
     <!-- Login form -->
     <div class="admin-container" id="loginSection">
         <div class="login-box">
@@ -41,20 +42,21 @@
             <button class="btn btn-primary" id="loginBtn">Anmelden</button>
             <p class="login-error" id="loginError">Benutzername oder Kennwort falsch</p>
         </div>
-        <div style="text-align:center;margin-top:1rem">
-            <a href="index.html" class="back-link">← Zurück zur App</a>
-        </div>
     </div>
 
     <!-- Admin menu (hidden until logged in) -->
     <div class="admin-container hidden" id="menuSection">
         <div class="admin-header">
             <h1>FlyerTracker Admin</h1>
-            <a href="index.html" class="back-link">← Zurück zur App</a>
             <button class="logout-btn" id="logoutBtn">Abmelden</button>
         </div>
 
         <div class="menu-grid">
+            <a href="admin-gpsrecords.html" class="menu-card">
+                <span class="icon">📍</span>
+                <span class="label">GPS-Daten</span>
+                <span class="desc">GPS-Aufzeichnungen anzeigen &amp; verwalten</span>
+            </a>
             <a href="admin-names.html" class="menu-card">
                 <span class="icon">👤</span>
                 <span class="label">Namen</span>
@@ -64,11 +66,6 @@
                 <span class="icon">🐕</span>
                 <span class="label">Hunde</span>
                 <span class="desc">Hundenamen verwalten</span>
-            </a>
-            <a href="admin-gpsrecords.html" class="menu-card">
-                <span class="icon">📍</span>
-                <span class="label">GPS-Daten</span>
-                <span class="desc">GPS-Aufzeichnungen anzeigen &amp; verwalten</span>
             </a>
             <a href="admin-categories.html" class="menu-card">
                 <span class="icon">🏷️</span>
