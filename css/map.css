@@ -1,0 +1,141 @@
+/* ── Map shared styles ────────────────────────────────────────── */
+#map {
+    width: 100%;
+    height: calc(100dvh - 120px);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-top: 0.75rem;
+}
+
+.map-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 1000;
+}
+
+.map-info .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--bg-badge);
+    border-radius: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 3px rgba(0,0,0,.3);
+}
+
+.toggle-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--bg-badge);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.toggle-badge:has(input:checked) {
+    background: var(--accent);
+    color: #fff;
+}
+
+.toggle-badge input {
+    accent-color: #fff;
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+.map-select {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+}
+
+.map-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,113,227,.15);
+}
+
+/* Navigation chooser in popup */
+.nav-chooser {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.nav-chooser a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #fff;
+    transition: opacity 0.2s;
+}
+
+.nav-chooser a:hover { opacity: 0.85; }
+.nav-google { background: #4285F4; }
+.nav-apple  { background: #333; }
+.nav-waze   { background: #33ccff; color: #000 !important; }
+
+/* Edit bar (admin-map only) */
+.edit-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #1d1d1f;
+    color: #fff;
+    font-size: 0.9rem;
+    z-index: 2000;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.3);
+}
+.edit-bar.hidden { display: none; }
+.edit-bar span { flex: 1; }

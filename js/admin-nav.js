@@ -33,10 +33,20 @@
         drawer.appendChild(a);
     });
 
-    // Divider + logout
+    // Divider + theme toggle + logout
     const divider = document.createElement('div');
     divider.className = 'nav-divider';
     drawer.appendChild(divider);
+
+    // Dark mode toggle
+    if (window.FT_THEME) {
+        drawer.appendChild(FT_THEME.createToggleButton());
+        setTimeout(() => FT_THEME.updateToggleLabel(), 0);
+    }
+
+    const divider2 = document.createElement('div');
+    divider2.className = 'nav-divider';
+    drawer.appendChild(divider2);
 
     const logoutLink = document.createElement('a');
     logoutLink.href = '#';

@@ -5,104 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
     <title>FlyerTracker – Meine Karte</title>
+    <link rel="stylesheet" href="css/shared.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/map.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-    <style>
-        #map {
-            width: 100%;
-            height: calc(100dvh - 120px);
-            border-radius: 12px;
-            border: 1px solid #d2d2d7;
-            margin-top: 0.75rem;
-        }
-        .map-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-            font-size: 0.875rem;
-            color: #6e6e73;
-        }
-        .map-info .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
-            background: #e8e8ed;
-            border-radius: 8px;
-            font-weight: 500;
-            color: #1d1d1f;
-        }
-        .legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            font-size: 0.8125rem;
-        }
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            box-shadow: 0 0 3px rgba(0,0,0,.3);
-        }
-        .toggle-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
-            background: #e8e8ed;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #1d1d1f;
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.2s;
-        }
-        .toggle-badge:has(input:checked) {
-            background: #0071e3;
-            color: #fff;
-        }
-        .toggle-badge input {
-            accent-color: #fff;
-            width: 1rem;
-            height: 1rem;
-            cursor: pointer;
-        }
-        /* Navigation chooser in popup */
-        .nav-chooser {
-            display: flex;
-            gap: 0.4rem;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-        .nav-chooser a {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            border-radius: 6px;
-            text-decoration: none;
-            color: #fff;
-            transition: opacity 0.2s;
-        }
-        .nav-chooser a:hover { opacity: 0.85; }
-        .nav-google { background: #4285F4; }
-        .nav-apple  { background: #333; }
-        .nav-waze   { background: #33ccff; color: #000 !important; }
-    </style>
 </head>
 <body>
     <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
@@ -133,5 +42,5 @@
     <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/dist/Leaflet.GoogleMutant.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/my-map.js"></script>
-</body>
+    <script src="js/theme.js"></script>`n</body>
 </html>
