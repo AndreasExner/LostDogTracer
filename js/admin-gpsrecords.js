@@ -433,7 +433,7 @@
             const yy = String(d.getFullYear()).slice(-2);
             const hh = String(d.getHours()).padStart(2, '0');
             const mi = String(d.getMinutes()).padStart(2, '0');
-            return `${dd}-${mm}-${yy} ${hh}:${mi}`;
+            return `${dd}.${mm}.${yy} ${hh}:${mi}`;
         } catch { return iso; }
     }
     function showToast(msg, isError) {
