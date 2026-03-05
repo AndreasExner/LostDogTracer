@@ -157,8 +157,8 @@
             const cats = await res.json();
             cats.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c;
-                opt.textContent = c;
+                opt.value = c.name || c;
+                opt.textContent = c.name || c;
                 categoryEl.appendChild(opt);
             });
         } catch (err) {

@@ -41,33 +41,11 @@
         return dogColorMap[dogName];
     }
 
-    /** SVG inner symbols per category (white, centered at cx=12 cy=12) */
-    const CATEGORY_SYMBOLS = {
-        'Flyer/Handzettel':
-            `<rect x="7" y="5" width="10" height="13" rx="1" fill="none" stroke="#fff" stroke-width="1.5"/>` +
-            `<line x1="9.5" y1="9" x2="14.5" y2="9" stroke="#fff" stroke-width="1.2"/>` +
-            `<line x1="9.5" y1="12" x2="14.5" y2="12" stroke="#fff" stroke-width="1.2"/>` +
-            `<line x1="9.5" y1="15" x2="12.5" y2="15" stroke="#fff" stroke-width="1.2"/>`,
-        'Sichtung':
-            `<ellipse cx="12" cy="12" rx="6" ry="4" fill="none" stroke="#fff" stroke-width="1.5"/>` +
-            `<circle cx="12" cy="12" r="2" fill="#fff"/>`,
-        'Entlaufort':
-            `<circle cx="9" cy="9" r="1.5" fill="#fff"/>` +
-            `<circle cx="15" cy="9" r="1.5" fill="#fff"/>` +
-            `<circle cx="7" cy="13" r="1.3" fill="#fff"/>` +
-            `<circle cx="17" cy="13" r="1.3" fill="#fff"/>` +
-            `<ellipse cx="12" cy="15" rx="3" ry="2.2" fill="#fff"/>`,
-        'Standort Falle':
-            `<circle cx="12" cy="12" r="5" fill="none" stroke="#fff" stroke-width="1.5"/>` +
-            `<circle cx="12" cy="12" r="1.5" fill="#fff"/>` +
-            `<line x1="12" y1="5" x2="12" y2="8" stroke="#fff" stroke-width="1.3"/>` +
-            `<line x1="12" y1="16" x2="12" y2="19" stroke="#fff" stroke-width="1.3"/>` +
-            `<line x1="5" y1="12" x2="8" y2="12" stroke="#fff" stroke-width="1.3"/>` +
-            `<line x1="16" y1="12" x2="19" y2="12" stroke="#fff" stroke-width="1.3"/>`
-    };
+    /** Category SVG symbols – loaded from API */
+    let categorySymbols = {};
 
     function colorIcon(color, category) {
-        const inner = CATEGORY_SYMBOLS[category] || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
+        const inner = categorySymbols[category] || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
         return L.divIcon({
             className: '',
             html: `<svg width="24" height="36" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">
@@ -133,6 +111,16 @@
     // ── Load & display records ───────────────────────────────────
     async function loadAndDisplay() {
         try {
+            // Load category SVG symbols
+            try {
+                const catRes = await fetch(`${API_BASE}/categories`, { headers: FT_AUTH.publicHeaders() });
+                if (catRes.ok) {
+                    const cats = await catRes.json();
+                    categorySymbols = {};
+                    cats.forEach(c => { if (c.svgSymbol) categorySymbols[c.name] = c.svgSymbol; });
+                }
+            } catch { /* use defaults */ }
+
             const params = new URLSearchParams();
             params.set('pageSize', 'all');
             params.set('name', filterName);

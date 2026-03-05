@@ -37,15 +37,16 @@ public class CategoriesFunction
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
 
-            var categories = new List<string>();
+            var categories = new List<object>();
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
                 var name = entity.GetString("Name") ?? entity.RowKey;
                 if (!string.IsNullOrWhiteSpace(name))
-                    categories.Add(name);
+                    categories.Add(new { name, svgSymbol = entity.GetString("SvgSymbol") ?? "" });
             }
 
-            categories.Sort(StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false));
+            var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
+            categories.Sort((a, b) => comparer.Compare(((dynamic)a).name, ((dynamic)b).name));
             return new OkObjectResult(categories);
         }
         catch (Exception ex)
@@ -77,7 +78,8 @@ public class CategoriesFunction
                 {
                     partitionKey = entity.PartitionKey,
                     rowKey = entity.RowKey,
-                    name = entity.GetString("Name") ?? entity.RowKey
+                    name = entity.GetString("Name") ?? entity.RowKey,
+                    svgSymbol = entity.GetString("SvgSymbol") ?? ""
                 });
             }
 
@@ -114,16 +116,21 @@ public class CategoriesFunction
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
 
+            var svgSymbol = "";
+            if (body.TryGetProperty("svgSymbol", out var svgProp))
+                svgSymbol = svgProp.GetString() ?? "";
+
             var rowKey = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString("D15");
             var entity = new TableEntity("categories", rowKey)
             {
-                { "Name", name.Trim() }
+                { "Name", name.Trim() },
+                { "SvgSymbol", svgSymbol }
             };
 
             await tableClient.AddEntityAsync(entity);
             _logger.LogInformation("Category created: {Name}", name);
 
-            return new CreatedResult("", new { partitionKey = "categories", rowKey, name = name.Trim() });
+            return new CreatedResult("", new { partitionKey = "categories", rowKey, name = name.Trim(), svgSymbol });
         }
         catch (Exception ex)
         {
@@ -157,6 +164,42 @@ public class CategoriesFunction
         }
     }
 
+    [Function("UpdateCategory")]
+    public async Task<IActionResult> UpdateCategory(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "manage/categories/{rowKey}")] HttpRequest req,
+        string rowKey)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            if (!_adminAuth.ValidateToken(req))
+                return AdminAuth.Unauthorized();
+
+            var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
+            var tableClient = _tableService.GetTableClient("Categories");
+
+            var entity = await tableClient.GetEntityAsync<TableEntity>("categories", rowKey);
+            if (body.TryGetProperty("name", out var nameProp))
+            {
+                var n = nameProp.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(n)) entity.Value["Name"] = n;
+            }
+            if (body.TryGetProperty("svgSymbol", out var svgProp))
+                entity.Value["SvgSymbol"] = svgProp.GetString() ?? "";
+
+            await tableClient.UpdateEntityAsync(entity.Value, entity.Value.ETag, TableUpdateMode.Replace);
+            _logger.LogInformation("Category updated: RowKey={RowKey}", rowKey);
+
+            return new OkObjectResult(new { message = "Aktualisiert" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating category");
+            return new StatusCodeResult(500);
+        }
+    }
+
     /// <summary>Seeds initial categories if the table is empty.</summary>
     [Function("SeedCategories")]
     public async Task<IActionResult> SeedCategories(
@@ -183,15 +226,22 @@ public class CategoriesFunction
             if (existing.Count > 0)
                 return new OkObjectResult(new { message = "Kategorien existieren bereits", seeded = 0 });
 
-            var defaults = new[] { "Flyer/Handzettel", "Sichtung", "Entlaufort", "Standort Falle" };
+            var defaults = new Dictionary<string, string>
+            {
+                ["Flyer/Handzettel"] = @"<rect x=""7"" y=""5"" width=""10"" height=""13"" rx=""1"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><line x1=""9.5"" y1=""9"" x2=""14.5"" y2=""9"" stroke=""#fff"" stroke-width=""1.2""/><line x1=""9.5"" y1=""12"" x2=""14.5"" y2=""12"" stroke=""#fff"" stroke-width=""1.2""/><line x1=""9.5"" y1=""15"" x2=""12.5"" y2=""15"" stroke=""#fff"" stroke-width=""1.2""/>",
+                ["Sichtung"] = @"<ellipse cx=""12"" cy=""12"" rx=""6"" ry=""4"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><circle cx=""12"" cy=""12"" r=""2"" fill=""#fff""/>",
+                ["Entlaufort"] = @"<circle cx=""9"" cy=""9"" r=""1.5"" fill=""#fff""/><circle cx=""15"" cy=""9"" r=""1.5"" fill=""#fff""/><circle cx=""7"" cy=""13"" r=""1.3"" fill=""#fff""/><circle cx=""17"" cy=""13"" r=""1.3"" fill=""#fff""/><ellipse cx=""12"" cy=""15"" rx=""3"" ry=""2.2"" fill=""#fff""/>",
+                ["Standort Falle"] = @"<circle cx=""12"" cy=""12"" r=""5"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><circle cx=""12"" cy=""12"" r=""1.5"" fill=""#fff""/><line x1=""12"" y1=""5"" x2=""12"" y2=""8"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""12"" y1=""16"" x2=""12"" y2=""19"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""5"" y1=""12"" x2=""8"" y2=""12"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""16"" y1=""12"" x2=""19"" y2=""12"" stroke=""#fff"" stroke-width=""1.3""/>"
+            };
             int count = 0;
-            foreach (var name in defaults)
+            foreach (var (name, svg) in defaults)
             {
                 var rowKey = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString("D15");
                 await Task.Delay(5); // ensure unique rowKeys
                 var entity = new TableEntity("categories", rowKey)
                 {
-                    { "Name", name }
+                    { "Name", name },
+                    { "SvgSymbol", svg }
                 };
                 await tableClient.AddEntityAsync(entity);
                 count++;
@@ -203,6 +253,50 @@ public class CategoriesFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error seeding categories");
+            return new StatusCodeResult(500);
+        }
+    }
+
+    /// <summary>Backfills SvgSymbol on existing categories that don't have one yet.</summary>
+    [Function("BackfillCategorySvg")]
+    public async Task<IActionResult> BackfillCategorySvg(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/categories/backfill-svg")] HttpRequest req)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            if (!_adminAuth.ValidateToken(req))
+                return AdminAuth.Unauthorized();
+
+            var defaults = new Dictionary<string, string>
+            {
+                ["Flyer/Handzettel"] = @"<rect x=""7"" y=""5"" width=""10"" height=""13"" rx=""1"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><line x1=""9.5"" y1=""9"" x2=""14.5"" y2=""9"" stroke=""#fff"" stroke-width=""1.2""/><line x1=""9.5"" y1=""12"" x2=""14.5"" y2=""12"" stroke=""#fff"" stroke-width=""1.2""/><line x1=""9.5"" y1=""15"" x2=""12.5"" y2=""15"" stroke=""#fff"" stroke-width=""1.2""/>",
+                ["Sichtung"] = @"<ellipse cx=""12"" cy=""12"" rx=""6"" ry=""4"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><circle cx=""12"" cy=""12"" r=""2"" fill=""#fff""/>",
+                ["Entlaufort"] = @"<circle cx=""9"" cy=""9"" r=""1.5"" fill=""#fff""/><circle cx=""15"" cy=""9"" r=""1.5"" fill=""#fff""/><circle cx=""7"" cy=""13"" r=""1.3"" fill=""#fff""/><circle cx=""17"" cy=""13"" r=""1.3"" fill=""#fff""/><ellipse cx=""12"" cy=""15"" rx=""3"" ry=""2.2"" fill=""#fff""/>",
+                ["Standort Falle"] = @"<circle cx=""12"" cy=""12"" r=""5"" fill=""none"" stroke=""#fff"" stroke-width=""1.5""/><circle cx=""12"" cy=""12"" r=""1.5"" fill=""#fff""/><line x1=""12"" y1=""5"" x2=""12"" y2=""8"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""12"" y1=""16"" x2=""12"" y2=""19"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""5"" y1=""12"" x2=""8"" y2=""12"" stroke=""#fff"" stroke-width=""1.3""/><line x1=""16"" y1=""12"" x2=""19"" y2=""12"" stroke=""#fff"" stroke-width=""1.3""/>"
+            };
+
+            var tableClient = _tableService.GetTableClient("Categories");
+            int updated = 0;
+
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>())
+            {
+                var name = entity.GetString("Name") ?? "";
+                var existing = entity.GetString("SvgSymbol") ?? "";
+                if (string.IsNullOrWhiteSpace(existing) && defaults.TryGetValue(name, out var svg))
+                {
+                    entity["SvgSymbol"] = svg;
+                    await tableClient.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
+                    updated++;
+                }
+            }
+
+            return new OkObjectResult(new { message = $"{updated} Kategorien aktualisiert", updated });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error backfilling category SVGs");
             return new StatusCodeResult(500);
         }
     }

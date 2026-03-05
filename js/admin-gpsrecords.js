@@ -482,7 +482,7 @@
 
             names.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; entryNameEl.appendChild(o); });
             dogs.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; entryDogEl.appendChild(o); });
-            cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; entryCategoryEl.appendChild(o); });
+            cats.forEach(c => { const v = c.name || c; const o = document.createElement('option'); o.value = v; o.textContent = v; entryCategoryEl.appendChild(o); });
             entryDropdownsLoaded = true;
         } catch (e) {
             console.error('Failed to load entry dropdowns', e);
@@ -673,7 +673,7 @@
 
             names.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; editNameEl.appendChild(o); });
             dogs.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; editDogEl.appendChild(o); });
-            cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; editCategoryEl.appendChild(o); });
+            cats.forEach(c => { const v = c.name || c; const o = document.createElement('option'); o.value = v; o.textContent = v; editCategoryEl.appendChild(o); });
             editDropdownsLoaded = true;
         } catch {
             showToast('Dropdown-Daten konnten nicht geladen werden', true);
