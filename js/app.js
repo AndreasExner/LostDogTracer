@@ -119,21 +119,22 @@
         });
     }
 
-    // ── Load dropdown data ───────────────────────────────────────────
+    // ── Load dropdown data (with offline fallback) ─────────────────
     async function loadNames() {
         try {
             userNameEl.classList.add('loading');
             const res = await fetch(`${API_BASE}/names`, { headers: { 'X-API-Key': API_KEY } });
             if (!res.ok) throw new Error('Fehler beim Laden der Namen');
             const names = await res.json();
-            names.forEach(n => {
-                const opt = document.createElement('option');
-                opt.value = n;
-                opt.textContent = n;
-                userNameEl.appendChild(opt);
-            });
+            if (typeof FT_OFFLINE !== 'undefined') FT_OFFLINE.saveDropdownData('names', names);
+            populateSelect(userNameEl, names);
         } catch (err) {
             console.error(err);
+            // Try offline cache
+            if (typeof FT_OFFLINE !== 'undefined') {
+                const cached = await FT_OFFLINE.getDropdownData('names');
+                if (cached) { populateSelect(userNameEl, cached); return; }
+            }
             showToast('Namen konnten nicht geladen werden', true);
         } finally {
             userNameEl.classList.remove('loading');
@@ -146,14 +147,14 @@
             const res = await fetch(`${API_BASE}/lost-dogs`, { headers: { 'X-API-Key': API_KEY } });
             if (!res.ok) throw new Error('Fehler beim Laden der Hunde');
             const dogs = await res.json();
-            dogs.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d;
-                lostDogEl.appendChild(opt);
-            });
+            if (typeof FT_OFFLINE !== 'undefined') FT_OFFLINE.saveDropdownData('lostDogs', dogs);
+            populateSelect(lostDogEl, dogs);
         } catch (err) {
             console.error(err);
+            if (typeof FT_OFFLINE !== 'undefined') {
+                const cached = await FT_OFFLINE.getDropdownData('lostDogs');
+                if (cached) { populateSelect(lostDogEl, cached); return; }
+            }
             showToast('Hunde konnten nicht geladen werden', true);
         } finally {
             lostDogEl.classList.remove('loading');
@@ -166,18 +167,28 @@
             const res = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
             if (!res.ok) throw new Error('Fehler beim Laden der Kategorien');
             const cats = await res.json();
-            cats.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.name || c;
-                opt.textContent = c.name || c;
-                categoryEl.appendChild(opt);
-            });
+            const catNames = cats.map(c => c.name || c);
+            if (typeof FT_OFFLINE !== 'undefined') FT_OFFLINE.saveDropdownData('categories', catNames);
+            populateSelect(categoryEl, catNames);
         } catch (err) {
             console.error(err);
+            if (typeof FT_OFFLINE !== 'undefined') {
+                const cached = await FT_OFFLINE.getDropdownData('categories');
+                if (cached) { populateSelect(categoryEl, cached); return; }
+            }
             showToast('Kategorien konnten nicht geladen werden', true);
         } finally {
             categoryEl.classList.remove('loading');
         }
+    }
+
+    function populateSelect(selectEl, items) {
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item;
+            opt.textContent = item;
+            selectEl.appendChild(opt);
+        });
     }
 
     // ── Selection persistence (localStorage) ─────────────────────────
@@ -227,7 +238,7 @@
         window.location.href = 'my-map.html?' + params;
     }
 
-    // ── Save GPS location ────────────────────────────────────────────
+    // ── Save GPS location (with offline fallback) ──────────────────
     async function onSaveLocation() {
         if (saveBtnEl.disabled) return;
 
@@ -236,18 +247,45 @@
 
         try {
             const position = await getCurrentPosition();
+            const entry = {
+                name: userNameEl.value,
+                lostDog: lostDogEl.value,
+                category: categoryEl.value,
+                comment: commentEl.value.trim(),
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                timestamp: new Date().toISOString()
+            };
 
+            // Convert photo blob to base64 for IndexedDB storage if needed
+            let photoBase64 = null;
             if (selectedPhotoBlob) {
-                // ── Multipart upload (with photo) ──
+                photoBase64 = await blobToBase64(selectedPhotoBlob);
+            }
+
+            if (!navigator.onLine) {
+                // ── Offline: queue for later ──
+                await FT_OFFLINE.queueEntry({ ...entry, photoBase64 });
+                showToast('📶 Offline gespeichert — wird bei Verbindung übertragen');
+                removePhoto();
+                commentEl.value = '';
+                updateCharCounter();
+                updatePendingBadge();
+                return;
+            }
+
+            // ── Online: send immediately ──
+            if (selectedPhotoBlob) {
                 const fd = new FormData();
-                fd.append('name', userNameEl.value);
-                fd.append('lostDog', lostDogEl.value);
-                fd.append('category', categoryEl.value);
-                fd.append('comment', commentEl.value.trim());
-                fd.append('latitude', position.coords.latitude.toString());
-                fd.append('longitude', position.coords.longitude.toString());
-                fd.append('accuracy', position.coords.accuracy.toString());
-                fd.append('timestamp', new Date().toISOString());
+                fd.append('name', entry.name);
+                fd.append('lostDog', entry.lostDog);
+                fd.append('category', entry.category);
+                fd.append('comment', entry.comment);
+                fd.append('latitude', entry.latitude.toString());
+                fd.append('longitude', entry.longitude.toString());
+                fd.append('accuracy', entry.accuracy.toString());
+                fd.append('timestamp', entry.timestamp);
                 fd.append('photo', selectedPhotoBlob, 'photo.jpg');
 
                 const res = await fetch(`${API_BASE}/save-location`, {
@@ -257,29 +295,18 @@
                 });
                 if (!res.ok) throw new Error('Speichern fehlgeschlagen');
             } else {
-                // ── JSON upload (no photo, backward compatible) ──
-                const payload = {
-                    name: userNameEl.value,
-                    lostDog: lostDogEl.value,
-                    category: categoryEl.value,
-                    comment: commentEl.value.trim(),
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    timestamp: new Date().toISOString()
-                };
-
                 const res = await fetch(`${API_BASE}/save-location`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(entry)
                 });
                 if (!res.ok) throw new Error('Speichern fehlgeschlagen');
             }
 
             showToast('Standort gespeichert ✓');
-            removePhoto(); // reset photo after successful save
-            commentEl.value = ''; // reset comment after successful save
+            removePhoto();
+            commentEl.value = '';
+            updateCharCounter();
         } catch (err) {
             console.error(err);
             if (err.code === 1) {
@@ -321,6 +348,112 @@
         }, 3000);
     }
 
+    // ── Blob to Base64 (for IndexedDB photo storage) ─────────────
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function base64ToBlob(base64) {
+        const parts = base64.split(',');
+        const mime = parts[0].match(/:(.*?);/)[1];
+        const bytes = atob(parts[1]);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+    }
+
+    // ── Offline Queue Sync ───────────────────────────────────────
+    async function syncPendingEntries() {
+        if (typeof FT_OFFLINE === 'undefined') return;
+        const pending = await FT_OFFLINE.getPendingEntries();
+        if (pending.length === 0) return;
+
+        let synced = 0;
+        for (const entry of pending) {
+            try {
+                if (entry.photoBase64) {
+                    const blob = base64ToBlob(entry.photoBase64);
+                    const fd = new FormData();
+                    fd.append('name', entry.name);
+                    fd.append('lostDog', entry.lostDog);
+                    fd.append('category', entry.category);
+                    fd.append('comment', entry.comment || '');
+                    fd.append('latitude', entry.latitude.toString());
+                    fd.append('longitude', entry.longitude.toString());
+                    fd.append('accuracy', entry.accuracy.toString());
+                    fd.append('timestamp', entry.timestamp);
+                    fd.append('photo', blob, 'photo.jpg');
+
+                    const res = await fetch(`${API_BASE}/save-location`, {
+                        method: 'POST',
+                        headers: { 'X-API-Key': API_KEY },
+                        body: fd
+                    });
+                    if (!res.ok) continue;
+                } else {
+                    const res = await fetch(`${API_BASE}/save-location`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+                        body: JSON.stringify({
+                            name: entry.name,
+                            lostDog: entry.lostDog,
+                            category: entry.category,
+                            comment: entry.comment || '',
+                            latitude: entry.latitude,
+                            longitude: entry.longitude,
+                            accuracy: entry.accuracy,
+                            timestamp: entry.timestamp
+                        })
+                    });
+                    if (!res.ok) continue;
+                }
+                await FT_OFFLINE.removeEntry(entry.id);
+                synced++;
+            } catch { /* Network still down, stop trying */ break; }
+        }
+        if (synced > 0) {
+            showToast(`✓ ${synced} Offline-Eintr${synced === 1 ? 'ag' : 'äge'} übertragen`);
+        }
+        updatePendingBadge();
+    }
+
+    // ── Pending badge ────────────────────────────────────────────
+    async function updatePendingBadge() {
+        if (typeof FT_OFFLINE === 'undefined') return;
+        const count = await FT_OFFLINE.pendingCount();
+        let badge = document.getElementById('pendingBadge');
+        if (count === 0) {
+            if (badge) badge.remove();
+            return;
+        }
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.id = 'pendingBadge';
+            badge.style.cssText = 'position:fixed;top:0.6rem;left:0.75rem;background:var(--warning);color:#fff;font-size:0.75rem;font-weight:700;padding:0.3rem 0.6rem;border-radius:20px;z-index:5000;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+            document.body.appendChild(badge);
+        }
+        badge.textContent = `📶 ${count} ausstehend`;
+    }
+
+    // ── Online / Offline events ──────────────────────────────────
+    window.addEventListener('online', () => {
+        showToast('Verbindung wiederhergestellt');
+        syncPendingEntries();
+    });
+    window.addEventListener('offline', () => {
+        showToast('Keine Internetverbindung — Einträge werden lokal gespeichert', true);
+    });
+
     // ── Start ────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        updatePendingBadge();
+        // Try syncing any queued entries on load
+        if (navigator.onLine) syncPendingEntries();
+    });
 })();

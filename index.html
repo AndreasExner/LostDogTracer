@@ -63,7 +63,13 @@
         <div id="toast" class="toast hidden"></div>
     </div>
     <script src="js/theme.js"></script>
+    <script src="js/offline-store.js"></script>
     <script src="js/app.js"></script>
     <script src="js/main-nav.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));
+        }
+    </script>
 </body>
 </html>
