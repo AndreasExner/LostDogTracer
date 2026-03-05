@@ -6,7 +6,7 @@ const FT_AUTH = (function () {
     'use strict';
 
     const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const API_KEY = IS_LOCAL ? 'flyertracker-dev-key-2026' : 'ft-prod-71d30cb551f34d008d0bbb81';
+    const API_KEY = IS_LOCAL ? 'flyertracker-dev-key-2026' : '%%PROD_API_KEY%%';
     const TOKEN_KEY = 'flyertracker_admin_token';
     const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
 

@@ -4,7 +4,7 @@
     // In production (SWA), API is at /api. Locally, Azure Functions runs on port 7071.
     const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
-    const API_KEY = IS_LOCAL ? 'flyertracker-dev-key-2026' : 'ft-prod-71d30cb551f34d008d0bbb81';
+    const API_KEY = IS_LOCAL ? 'flyertracker-dev-key-2026' : '%%PROD_API_KEY%%';
     const STORAGE_KEY_NAME = 'flyertracker_userName';
     const STORAGE_KEY_LOCATION = 'flyertracker_lostDog';
     const STORAGE_KEY_CATEGORY = 'flyertracker_category';
