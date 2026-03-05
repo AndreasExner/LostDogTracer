@@ -118,19 +118,19 @@
         data.records.forEach(r => {
             const tr = document.createElement('tr');
             const photoCell = r.photoUrl
-                ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
-                : '<td class="no-photo">—</td>';
+                ? `<td data-label="Foto"><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
+                : '<td data-label="Foto" class="no-photo">—</td>';
             tr.innerHTML = `
-                <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
-                <td>${esc(r.name)}</td>
-                <td>${esc(r.lostDog)}</td>
-                <td>${formatDate(r.recordedAt)}</td>
-                <td>${esc(r.category || '')}</td>
-                <td>${esc(r.comment || '')}</td>
+                <td data-label=""><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
+                <td data-label="Erfasser">${esc(r.name)}</td>
+                <td data-label="Suchhund">${esc(r.lostDog)}</td>
+                <td data-label="Zeitpunkt">${formatDate(r.recordedAt)}</td>
+                <td data-label="Kategorie">${esc(r.category || '')}</td>
+                <td data-label="Kommentar">${esc(r.comment || '')}</td>
                 ${photoCell}
-                <td>${r.latitude.toFixed(6)}</td>
-                <td>${r.longitude.toFixed(6)}</td>
-                <td>${r.accuracy.toFixed(1)} m</td>`;
+                <td data-label="Breitengrad">${r.latitude.toFixed(6)}</td>
+                <td data-label="Längengrad">${r.longitude.toFixed(6)}</td>
+                <td data-label="Genauigkeit">${r.accuracy.toFixed(1)} m</td>`;
             bodyEl.appendChild(tr);
         });
     }

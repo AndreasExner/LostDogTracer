@@ -259,3 +259,31 @@ select.form-control {
     text-overflow: ellipsis;
     letter-spacing: 0.02em;
 }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .app-container {
+        padding: 1.5rem 1rem;
+    }
+    .form-control {
+        font-size: 1rem;
+        padding: 0.75rem 0.875rem;
+    }
+    .btn-save {
+        font-size: 1rem;
+        padding: 0.875rem;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .app-container {
+        max-width: 520px;
+        padding: 2rem;
+    }
+}
+
+@media (min-width: 769px) {
+    .app-container {
+        padding: 3rem 2rem;
+    }
+}
