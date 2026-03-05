@@ -490,11 +490,22 @@
         }
     }
 
-    /** Set timestamp field to current local time */
+    /** Set timestamp field to current local time in DD.MM.YYYY HH:MM format */
     function setDefaultTimestamp() {
         const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        entryTimestampEl.value = now.toISOString().slice(0, 16);
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mi = String(now.getMinutes()).padStart(2, '0');
+        entryTimestampEl.value = `${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+    }
+
+    /** Parse DD.MM.YYYY HH:MM to ISO string */
+    function parseGermanTimestamp(str) {
+        const m = str.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})$/);
+        if (!m) return null;
+        return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]).toISOString();
     }
 
     /** Search Nominatim for address (DE + NL) */
@@ -595,7 +606,7 @@
                 latitude: selectedCoords.lat,
                 longitude: selectedCoords.lon,
                 accuracy: 0,
-                timestamp: new Date(entryTimestampEl.value).toISOString()
+                timestamp: parseGermanTimestamp(entryTimestampEl.value) || new Date().toISOString()
             };
 
             const res = await fetch(`${API_BASE}/save-location`, {
