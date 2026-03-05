@@ -123,13 +123,13 @@
                 <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
                 <td>${esc(r.name)}</td>
                 <td>${esc(r.lostDog)}</td>
+                <td>${formatDate(r.recordedAt)}</td>
                 <td>${esc(r.category || '')}</td>
                 <td>${esc(r.comment || '')}</td>
                 ${photoCell}
                 <td>${r.latitude.toFixed(6)}</td>
                 <td>${r.longitude.toFixed(6)}</td>
-                <td>${r.accuracy.toFixed(1)} m</td>
-                <td>${formatDate(r.recordedAt)}</td>`;
+                <td>${r.accuracy.toFixed(1)} m</td>`;
             bodyEl.appendChild(tr);
         });
     }
@@ -428,10 +428,12 @@
         if (!iso) return '—';
         try {
             const d = new Date(iso);
-            return d.toLocaleString('de-DE', {
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yy = String(d.getFullYear()).slice(-2);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            return `${dd}-${mm}-${yy} ${hh}:${mi}`;
         } catch { return iso; }
     }
     function showToast(msg, isError) {
