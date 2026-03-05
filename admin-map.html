@@ -119,6 +119,23 @@
         .nav-google { background: #4285F4; }
         .nav-apple  { background: #333; }
         .nav-waze   { background: #33ccff; color: #000 !important; }
+        .edit-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: #1d1d1f;
+            color: #fff;
+            font-size: 0.9rem;
+            z-index: 2000;
+            box-shadow: 0 -2px 12px rgba(0,0,0,.3);
+        }
+        .edit-bar.hidden { display: none; }
+        .edit-bar span { flex: 1; }
     </style>
 </head>
 <body>
@@ -154,33 +171,11 @@
 
         <div id="toast" class="toast hidden"></div>
 
-        <!-- Edit modal -->
-        <div id="editModal" class="edit-modal hidden">
-            <div class="edit-modal-content">
-                <h2>Eintrag bearbeiten</h2>
-                <div class="form-grid">
-                    <label>Name
-                        <select id="editName"><option value="">— nicht ändern —</option></select>
-                    </label>
-                    <label>Hund
-                        <select id="editDog"><option value="">— nicht ändern —</option></select>
-                    </label>
-                    <label>Kategorie
-                        <select id="editCategory"><option value="">— nicht ändern —</option></select>
-                    </label>
-                    <label>Kommentar
-                        <input type="text" id="editComment" placeholder="Kommentar (max. 40 Zeichen)" maxlength="40">
-                    </label>
-                </div>
-                <label class="edit-photo-delete" id="editPhotoRow">
-                    <input type="checkbox" id="editDeletePhoto"> Foto löschen
-                </label>
-                <p id="editCoordsHint" style="font-size:0.85rem;color:#6e6e73;margin:0 0 0.75rem;"></p>
-                <div class="edit-modal-actions">
-                    <button class="btn btn-primary" id="editSaveBtn">Speichern</button>
-                    <button class="btn btn-secondary" id="editCancelBtn">Abbrechen</button>
-                </div>
-            </div>
+        <!-- Edit bar (position only) -->
+        <div id="editBar" class="edit-bar hidden">
+            <span id="editCoordsHint">📍 Position verschieben…</span>
+            <button class="btn btn-primary btn-sm" id="editSaveBtn">Speichern</button>
+            <button class="btn btn-secondary btn-sm" id="editCancelBtn">Abbrechen</button>
         </div>
     </div>
 

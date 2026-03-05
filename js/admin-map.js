@@ -394,47 +394,24 @@
         toastTimeout = setTimeout(() => toastEl.classList.add('hidden'), 3000);
     }
 
-    // ── Edit single marker ────────────────────────────────────────
-    const editModal = document.getElementById('editModal');
-    const editNameEl = document.getElementById('editName');
-    const editDogEl = document.getElementById('editDog');
-    const editCategoryEl = document.getElementById('editCategory');
-    const editCommentEl = document.getElementById('editComment');
-    const editDeletePhotoEl = document.getElementById('editDeletePhoto');
-    const editPhotoRow = document.getElementById('editPhotoRow');
+    // ── Edit marker position ─────────────────────────────────────
+    const editBar = document.getElementById('editBar');
     const editCoordsHint = document.getElementById('editCoordsHint');
     const editSaveBtn = document.getElementById('editSaveBtn');
     const editCancelBtn = document.getElementById('editCancelBtn');
 
-    let editDropdownsLoaded = false;
-    let editingMarker = null;          // the Leaflet marker being edited
-    let editOriginalLatLng = null;     // original position for cancel
-    let editRecord = null;             // the record object
-
-    async function loadEditDropdowns() {
-        if (editDropdownsLoaded) return;
-        try {
-            const hdrs = FT_AUTH.publicHeaders();
-            const [namesRes, dogsRes, catsRes] = await Promise.all([
-                fetch(`${API_BASE}/names`, { headers: hdrs }),
-                fetch(`${API_BASE}/lost-dogs`, { headers: hdrs }),
-                fetch(`${API_BASE}/categories`, { headers: hdrs })
-            ]);
-            (await namesRes.json()).forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; editNameEl.appendChild(o); });
-            (await dogsRes.json()).forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; editDogEl.appendChild(o); });
-            (await catsRes.json()).forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; editCategoryEl.appendChild(o); });
-            editDropdownsLoaded = true;
-        } catch { showToast('Dropdown-Daten konnten nicht geladen werden', true); }
-    }
+    let editingMarker = null;
+    let editOriginalLatLng = null;
+    let editRecord = null;
 
     function updateCoordsHint() {
         if (!editingMarker) return;
         const pos = editingMarker.getLatLng();
-        editCoordsHint.textContent = `📍 Neue Position: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
+        editCoordsHint.textContent = `📍 ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
     }
 
     // Delegate click on edit button inside popup
-    document.addEventListener('click', async (e) => {
+    document.addEventListener('click', (e) => {
         const btn = e.target.closest('.edit-marker-btn');
         if (!btn) return;
         e.preventDefault();
@@ -442,7 +419,6 @@
         const pk = btn.dataset.pk;
         const rk = btn.dataset.rk;
 
-        // Find the marker in the cluster group
         let targetMarker = null;
         clusterGroup.eachLayer(m => {
             if (m._ftRecord && m._ftRecord.partitionKey === pk && m._ftRecord.rowKey === rk) {
@@ -451,33 +427,17 @@
         });
         if (!targetMarker) return;
 
-        // Close popup and start editing
         map.closePopup();
-        await openEditForMarker(targetMarker);
-    });
 
-    async function openEditForMarker(marker) {
-        await loadEditDropdowns();
+        editingMarker = targetMarker;
+        editRecord = targetMarker._ftRecord;
+        editOriginalLatLng = targetMarker.getLatLng();
 
-        editingMarker = marker;
-        editRecord = marker._ftRecord;
-        editOriginalLatLng = marker.getLatLng();
-
-        // Make marker draggable
-        marker.dragging.enable();
-        marker.on('drag', updateCoordsHint);
-
-        // Pre-fill fields
-        editNameEl.value = editRecord.name || '';
-        editDogEl.value = editRecord.lostDog || '';
-        editCategoryEl.value = editRecord.category || '';
-        editCommentEl.value = editRecord.comment || '';
-        editDeletePhotoEl.checked = false;
-        editPhotoRow.style.display = editRecord.photoUrl ? '' : 'none';
+        targetMarker.dragging.enable();
+        targetMarker.on('drag', updateCoordsHint);
         updateCoordsHint();
-
-        editModal.classList.remove('hidden');
-    }
+        editBar.classList.remove('hidden');
+    });
 
     function cancelEdit() {
         if (editingMarker) {
@@ -487,11 +447,10 @@
         }
         editingMarker = null;
         editRecord = null;
-        editModal.classList.add('hidden');
+        editBar.classList.add('hidden');
     }
 
     editCancelBtn.addEventListener('click', cancelEdit);
-    editModal.addEventListener('click', e => { if (e.target === editModal) cancelEdit(); });
 
     editSaveBtn.addEventListener('click', async () => {
         if (!editingMarker || !editRecord) return;
@@ -499,17 +458,12 @@
         const newPos = editingMarker.getLatLng();
         const payload = {
             keys: [{ partitionKey: editRecord.partitionKey, rowKey: editRecord.rowKey }],
-            name: editNameEl.value || undefined,
-            lostDog: editDogEl.value || undefined,
-            category: editCategoryEl.value,
-            comment: editCommentEl.value,
-            deletePhoto: editDeletePhotoEl.checked,
             latitude: newPos.lat,
             longitude: newPos.lng
         };
 
         editSaveBtn.disabled = true;
-        editSaveBtn.textContent = 'Wird gespeichert…';
+        editSaveBtn.textContent = 'Speichert…';
 
         try {
             const res = await fetch(`${API_BASE}/manage/gps-records/update`, {
@@ -520,17 +474,15 @@
             if (res.status === 401) { FT_AUTH.logout(); location.href = 'admin.html'; return; }
             if (!res.ok) throw new Error();
 
-            const result = await res.json();
-            showToast(`${result.updated} Eintrag aktualisiert`);
+            showToast('Position aktualisiert');
 
-            // Clean up editing state
             editingMarker.dragging.disable();
             editingMarker.off('drag', updateCoordsHint);
             editingMarker = null;
             editRecord = null;
-            editModal.classList.add('hidden');
+            editBar.classList.add('hidden');
 
-            // Reload all data to reflect changes
+            // Reload map data
             clusterGroup.clearLayers();
             circlesLayer.clearLayers();
             routesLayer.clearLayers();
