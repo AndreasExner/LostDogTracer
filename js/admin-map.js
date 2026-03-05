@@ -135,7 +135,7 @@
             routesLayer.clearLayers();
             legendEl.innerHTML = '';
             loadAndDisplay();
-        }, 300);
+        }, 500);
     }
     filterDogEl.addEventListener('change', onFilterChange);
     filterNameEl.addEventListener('change', onFilterChange);

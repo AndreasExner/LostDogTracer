@@ -37,6 +37,8 @@
 
     let currentPage = 1;
     let data = { records: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 1, lostDogs: [] };
+    let catDropdownBuilt = false;
+    let catFilterTimer = null;
 
     // ── Load records ─────────────────────────────────────────────
     async function loadRecords() {
@@ -89,20 +91,27 @@
         filterNameEl.value = currentName;
 
         const currentCat = getSelectedCategories();
-        catDropdownEl.innerHTML = '';
-        categories.forEach(c => {
-            const label = document.createElement('label');
-            label.className = 'multi-select-item';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.value = c;
-            if (currentCat.includes(c)) cb.checked = true;
-            cb.addEventListener('change', () => { updateCatBtnText(); currentPage = 1; loadRecords(); });
-            label.appendChild(cb);
-            label.appendChild(document.createTextNode(' ' + c));
-            catDropdownEl.appendChild(label);
-        });
-        updateCatBtnText();
+        if (!catDropdownBuilt) {
+            catDropdownEl.innerHTML = '';
+            categories.forEach(c => {
+                const label = document.createElement('label');
+                label.className = 'multi-select-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = c;
+                if (currentCat.includes(c)) cb.checked = true;
+                cb.addEventListener('change', () => {
+                    updateCatBtnText();
+                    clearTimeout(catFilterTimer);
+                    catFilterTimer = setTimeout(() => { currentPage = 1; loadRecords(); }, 500);
+                });
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + c));
+                catDropdownEl.appendChild(label);
+            });
+            updateCatBtnText();
+            catDropdownBuilt = true;
+        }
     }
 
     // ── Render table ─────────────────────────────────────────────
