@@ -121,6 +121,7 @@
 
     // ── Filter change handler (debounced) ────────────────────────
     let filterTimer = null;
+    let catDropdownBuilt = false;
     function onFilterChange() {
         clearTimeout(filterTimer);
         filterTimer = setTimeout(() => {
@@ -214,28 +215,30 @@
             });
             filterNameEl.value = currentNameVal;
 
-            // Populate category filter dropdown (keep current selection)
-            const currentCats = data.categories || [];
-            const currentCatSel = getSelectedCategories();
-            catDropdownEl.innerHTML = '';
-            currentCats.forEach(c => {
-                const label = document.createElement('label');
-                label.className = 'multi-select-item';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.value = c;
-                // On first load, pre-select from URL param
-                if (currentCatSel.length > 0) {
-                    if (currentCatSel.includes(c)) cb.checked = true;
-                } else if (filterCategory && filterCategory.split(',').includes(c)) {
-                    cb.checked = true;
-                }
-                cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
-                label.appendChild(cb);
-                label.appendChild(document.createTextNode(' ' + c));
-                catDropdownEl.appendChild(label);
-            });
-            updateCatBtnText();
+            // Populate category filter dropdown (only on first load)
+            if (!catDropdownBuilt) {
+                const currentCats = data.categories || [];
+                const currentCatSel = getSelectedCategories();
+                catDropdownEl.innerHTML = '';
+                currentCats.forEach(c => {
+                    const label = document.createElement('label');
+                    label.className = 'multi-select-item';
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.value = c;
+                    if (currentCatSel.length > 0) {
+                        if (currentCatSel.includes(c)) cb.checked = true;
+                    } else if (filterCategory && filterCategory.split(',').includes(c)) {
+                        cb.checked = true;
+                    }
+                    cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
+                    label.appendChild(cb);
+                    label.appendChild(document.createTextNode(' ' + c));
+                    catDropdownEl.appendChild(label);
+                });
+                updateCatBtnText();
+                catDropdownBuilt = true;
+            }
 
             if (records.length === 0) {
                 showToast('Keine GPS-Daten vorhanden', true);

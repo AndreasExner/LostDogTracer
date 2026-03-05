@@ -117,9 +117,9 @@
 }
 
 .nav-chooser a:hover { opacity: 0.85; }
-.nav-google { background: #4285F4; }
-.nav-apple  { background: #333; }
-.nav-waze   { background: #33ccff; color: #000 !important; }
+.nav-google { background: #1a73e8; color: #fff !important; }
+.nav-apple  { background: #1d1d1f; color: #fff !important; }
+.nav-waze   { background: #05c8f7; color: #1d1d1f !important; }
 
 /* Edit bar (admin-map only) */
 .edit-bar {
