@@ -2,7 +2,7 @@
 (function () {
     // Inject on admin sub-pages and admin.html menu page
     const path = location.pathname;
-    const isSubPage = /admin-(gpsrecords|map|names|lostdogs|categories|users)\.html$/i.test(path);
+    const isSubPage = /admin-(gpsrecords|map|names|lostdogs|categories|users|backup)\.html$/i.test(path);
     const isAdminHome = /admin\.html$/i.test(path);
     if (!isSubPage && !isAdminHome) return;
 
@@ -12,6 +12,7 @@
         { href: 'admin-lostdogs.html',   icon: '🐕', label: 'Hunde' },
         { href: 'admin-categories.html', icon: '🏷️', label: 'Kategorien' },
         { href: 'admin-users.html',      icon: '🔑', label: 'Admin-Konten' },
+        { href: 'admin-backup.html',     icon: '🔧', label: 'Wartung' },
     ];
 
     // Build DOM
