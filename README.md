@@ -11,6 +11,8 @@ FlyerTracker ist eine mobile-first Progressive Web App (PWA), die von Freiwillig
 ### Benutzer (Feld-App)
 - GPS-Standort mit Kategorie, Kommentar und optionalem Foto speichern
 - Eigene Einträge in Tabelle und auf Karte anzeigen
+- Einträge direkt auf der Karte löschen
+- **Live-Tracking**: eigenen Standort in Echtzeit auf der Karte anzeigen (ein-/ausschaltbar)
 - Leaflet-Karte mit 6 Kartenebenen (OSM, Topo, Esri Satellite, Google Roads/Satellite/Hybrid)
 - Marker-Clustering, farbcodierte Routen je Suchhund, Laufrouten-Anzeige
 - Navigation zu Standorten via Google Maps, Apple Maps oder Waze
@@ -19,12 +21,20 @@ FlyerTracker ist eine mobile-first Progressive Web App (PWA), die von Freiwillig
 
 ### Admin
 - GPS-Daten verwalten (filtern, sortieren, paginieren, bearbeiten, löschen)
-- Kartenansicht mit allen Datensätzen, Kategorie-Mehrfachfilter, In-Map-Editing
+- Kartenansicht mit allen Datensätzen, Kategorie-Mehrfachfilter, In-Map-Editing inkl. Löschen
 - Neuer Eintrag per Adresssuche (Nominatim) mit Mini-Map und Marker-Feinkorrektur
 - Export als KML und CSV
 - Stammdaten verwalten: Namen, Hunde, Kategorien (inkl. SVG-Markersymbole)
 - Admin-Konten verwalten (Passwort ändern, neue Benutzer, Reset)
+- **Wartung**: Daten-Backup (JSON-Export) und Wiederherstellung (JSON-Import)
 - Hamburger-Navigation zwischen allen Admin-Seiten
+
+### Sicherheit
+- API-Key Schutz aller Endpunkte
+- Gestaffeltes Rate-Limiting: Read 120/min, Write 15/min, Auth 10/min pro IP
+- Prod API-Key wird über GitHub Secrets zur Build-Zeit injiziert (nie im Quellcode)
+- Admin-Authentifizierung mit PBKDF2-gehashten Passwörtern
+- Session-Expired Toast bei 401-Redirects
 
 ---
 
@@ -67,7 +77,10 @@ FlyerTracker ist eine mobile-first Progressive Web App (PWA), die von Freiwillig
 | GET | `/api/my-records` | Eigene Einträge (gefiltert, paginiert) |
 | GET | `/api/manage/gps-records` | Alle Einträge (Admin, gefiltert, paginiert) |
 | POST | `/api/manage/gps-records/update` | Einträge bearbeiten (Einzel-/Bulk) |
-| DELETE | `/api/manage/gps-records/delete` | Einträge löschen |
+| POST | `/api/manage/gps-records/delete` | Einträge löschen |
+| POST | `/api/my-records/delete` | Eigene Einträge löschen |
+| GET | `/api/manage/backup` | Daten-Backup (JSON-Export aller Tabellen) |
+| POST | `/api/manage/restore` | Daten-Wiederherstellung (JSON-Import) |
 | POST | `/api/auth/login` | Admin-Login |
 | GET | `/api/auth/verify` | Token validieren |
 
@@ -87,6 +100,7 @@ FlyerTracker/
 ├── admin-lostdogs.html           # Admin: Hunde verwalten
 ├── admin-categories.html         # Admin: Kategorien verwalten
 ├── admin-users.html              # Admin: Konten verwalten
+├── admin-backup.html             # Admin: Wartung (Backup/Restore)
 ├── sw.js                         # Service Worker (Offline Cache)
 ├── manifest.json                 # PWA Manifest
 ├── staticwebapp.config.json      # Azure SWA Konfiguration
@@ -110,7 +124,8 @@ FlyerTracker/
 │   ├── admin-names.js            # Admin: Namen CRUD
 │   ├── admin-lostdogs.js         # Admin: Hunde CRUD
 │   ├── admin-users.js            # Admin: Konten CRUD
-│   ├── my-map.js                 # Benutzer: Karte
+│   ├── admin-backup.js           # Admin: Backup/Restore
+│   ├── my-map.js                 # Benutzer: Karte + Live-Tracking
 │   └── my-records.js             # Benutzer: Eigene Einträge
 │
 ├── api/
@@ -122,8 +137,9 @@ FlyerTracker/
 │   │   ├── LostDogsFunction.cs
 │   │   ├── CategoriesFunction.cs
 │   │   ├── AuthFunction.cs
-│   │   └── AdminUsersFunction.cs
-│   └── Security/                 # Auth-Middleware
+│   │   ├── AdminUsersFunction.cs
+│   │   └── BackupRestoreFunction.cs
+│   └── Security/                 # Auth & Rate-Limiting Middleware
 │
 ├── docs/                         # Benutzer-Dokumentation
 │   ├── FlyerTracker - Benutzeransicht.pdf
@@ -185,7 +201,9 @@ Die API läuft auf `http://localhost:7071`, das Frontend erkennt localhost autom
 
 ## Deployment
 
-Das Projekt wird über **GitHub Actions** automatisch bei Push auf `main` deployed.
+Das Projekt wird über **GitHub Actions** automatisch bei Push auf `main` deployed. Dabei werden:
+- Der **Prod API-Key** aus GitHub Secrets injiziert (Platzhalter `%%PROD_API_KEY%%`)
+- Die **Build-Version** generiert und in die Navigation injiziert (`v1.0.N-hash`)
 
 ```yaml
 # .github/workflows/azure-static-web-apps.yml
