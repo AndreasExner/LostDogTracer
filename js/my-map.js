@@ -275,7 +275,7 @@
             const res = await fetch(`${API_BASE}/my-records/delete`, {
                 method: 'POST',
                 headers: FT_AUTH.publicHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ keys: [{ partitionKey: pk, rowKey: rk }] })
+                body: JSON.stringify({ name: filterName, lostDog: filterDog, keys: [{ partitionKey: pk, rowKey: rk }] })
             });
             if (!res.ok) throw new Error();
             showToast('Eintrag gelöscht');
