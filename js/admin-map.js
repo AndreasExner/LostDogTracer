@@ -455,7 +455,7 @@
             const res = await fetch(`${API_BASE}/manage/gps-records/delete`, {
                 method: 'POST',
                 headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ keys: [{ partitionKey: editRecord.partitionKey, rowKey: editRecord.rowKey }] })
+                body: JSON.stringify([{ partitionKey: editRecord.partitionKey, rowKey: editRecord.rowKey }])
             });
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
