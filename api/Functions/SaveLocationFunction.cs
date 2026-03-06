@@ -18,16 +18,16 @@ public class SaveLocationFunction
     private readonly BlobServiceClient _blobService;
     private readonly ILogger<SaveLocationFunction> _logger;
     private readonly ApiKeyValidator _apiKey;
-    private readonly RateLimiter _rateLimiter;
+    private readonly RateLimitProvider _rateLimit;
 
     public SaveLocationFunction(TableServiceClient tableService, BlobServiceClient blobService,
-        ILogger<SaveLocationFunction> logger, ApiKeyValidator apiKey, RateLimiter rateLimiter)
+        ILogger<SaveLocationFunction> logger, ApiKeyValidator apiKey, RateLimitProvider rateLimit)
     {
         _tableService = tableService;
         _blobService = blobService;
         _logger = logger;
         _apiKey = apiKey;
-        _rateLimiter = rateLimiter;
+        _rateLimit = rateLimit;
     }
 
     [Function("SaveLocation")]
@@ -40,7 +40,7 @@ public class SaveLocationFunction
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
 
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (!_rateLimiter.IsAllowed(ip))
+            if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
 
             string? name, lostDog, timestamp;

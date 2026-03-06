@@ -27,7 +27,6 @@ public class RateLimiter
 
         lock (sw)
         {
-            // Purge timestamps outside window
             while (sw.Timestamps.Count > 0 && now - sw.Timestamps.Peek() > _window)
                 sw.Timestamps.Dequeue();
 
@@ -39,7 +38,6 @@ public class RateLimiter
         }
     }
 
-    /// <summary>Periodically clean up stale keys (call from a timer if desired).</summary>
     public void Cleanup()
     {
         var now = DateTimeOffset.UtcNow;
@@ -59,5 +57,28 @@ public class RateLimiter
     private class SlidingWindow
     {
         public Queue<DateTimeOffset> Timestamps { get; } = new();
+    }
+}
+
+/// <summary>
+/// Provides separate rate limiters for read and write operations.
+/// Read:  120 requests / minute / IP  (dropdown loads, table views, map data)
+/// Write:  15 requests / minute / IP  (save location, create/update/delete)
+/// Auth:   10 requests / minute / IP  (login attempts)
+/// </summary>
+public class RateLimitProvider
+{
+    public RateLimiter Read { get; }
+    public RateLimiter Write { get; }
+    public RateLimiter Auth { get; }
+
+    public RateLimitProvider(
+        int readMax = 120, int writeMax = 15, int authMax = 10,
+        int windowSeconds = 60)
+    {
+        var window = TimeSpan.FromSeconds(windowSeconds);
+        Read = new RateLimiter(readMax, window);
+        Write = new RateLimiter(writeMax, window);
+        Auth = new RateLimiter(authMax, window);
     }
 }

@@ -17,15 +17,17 @@ public class GPSRecordsFunction
     private readonly ILogger<GPSRecordsFunction> _logger;
     private readonly ApiKeyValidator _apiKey;
     private readonly AdminAuth _adminAuth;
+    private readonly RateLimitProvider _rateLimit;
 
     public GPSRecordsFunction(TableServiceClient tableService, BlobServiceClient blobService,
-        ILogger<GPSRecordsFunction> logger, ApiKeyValidator apiKey, AdminAuth adminAuth)
+        ILogger<GPSRecordsFunction> logger, ApiKeyValidator apiKey, AdminAuth adminAuth, RateLimitProvider rateLimit)
     {
         _tableService = tableService;
         _blobService = blobService;
         _logger = logger;
         _apiKey = apiKey;
         _adminAuth = adminAuth;
+        _rateLimit = rateLimit;
     }
 
     [Function("GetGPSRecords")]
@@ -36,6 +38,9 @@ public class GPSRecordsFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
             var tableClient = _tableService.GetTableClient("GPSRecords");
@@ -143,6 +148,9 @@ public class GPSRecordsFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -205,6 +213,9 @@ public class GPSRecordsFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
 
             var nameFilter = req.Query["name"].FirstOrDefault();
             var lostDogFilter = req.Query["lostDog"].FirstOrDefault();
@@ -275,6 +286,9 @@ public class GPSRecordsFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
 
             var body = await JsonSerializer.DeserializeAsync<MyDeleteRequest>(req.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -363,6 +377,9 @@ public class GPSRecordsFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 

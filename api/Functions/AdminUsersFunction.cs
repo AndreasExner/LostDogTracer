@@ -12,12 +12,14 @@ public class AdminUsersFunction
     private readonly AdminAuth _auth;
     private readonly ApiKeyValidator _apiKey;
     private readonly ILogger<AdminUsersFunction> _logger;
+    private readonly RateLimitProvider _rateLimit;
 
-    public AdminUsersFunction(AdminAuth auth, ApiKeyValidator apiKey, ILogger<AdminUsersFunction> logger)
+    public AdminUsersFunction(AdminAuth auth, ApiKeyValidator apiKey, ILogger<AdminUsersFunction> logger, RateLimitProvider rateLimit)
     {
         _auth = auth;
         _apiKey = apiKey;
         _logger = logger;
+        _rateLimit = rateLimit;
     }
 
     [Function("GetAdminUsers")]
@@ -28,6 +30,9 @@ public class AdminUsersFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_auth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -49,6 +54,9 @@ public class AdminUsersFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_auth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -85,6 +93,9 @@ public class AdminUsersFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_auth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -120,6 +131,9 @@ public class AdminUsersFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_auth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 

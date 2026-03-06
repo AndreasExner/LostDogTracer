@@ -20,8 +20,8 @@ var host = new HostBuilder()
         var apiKey = context.Configuration["API_KEY"] ?? "flyertracker-dev-key-2026";
         services.AddSingleton(new ApiKeyValidator(apiKey));
 
-        // Rate Limiter — max 10 save-location calls per minute per IP
-        services.AddSingleton(new RateLimiter(maxRequests: 10, window: TimeSpan.FromMinutes(1)));
+        // Rate Limiter — Read: 120/min, Write: 15/min, Auth: 10/min per IP
+        services.AddSingleton(new RateLimitProvider());
 
         // Admin Auth — multi-user, Table Storage backed, PBKDF2 hashed
         var tokenSecret = context.Configuration["TOKEN_SECRET"] ?? "ft-local-dev-secret-key-change-in-prod";

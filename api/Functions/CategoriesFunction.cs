@@ -14,14 +14,16 @@ public class CategoriesFunction
     private readonly ILogger<CategoriesFunction> _logger;
     private readonly ApiKeyValidator _apiKey;
     private readonly AdminAuth _adminAuth;
+    private readonly RateLimitProvider _rateLimit;
 
     public CategoriesFunction(TableServiceClient tableService, ILogger<CategoriesFunction> logger,
-        ApiKeyValidator apiKey, AdminAuth adminAuth)
+        ApiKeyValidator apiKey, AdminAuth adminAuth, RateLimitProvider rateLimit)
     {
         _tableService = tableService;
         _logger = logger;
         _apiKey = apiKey;
         _adminAuth = adminAuth;
+        _rateLimit = rateLimit;
     }
 
     /// <summary>Public endpoint – returns sorted list of category names (for the submit form).</summary>
@@ -33,6 +35,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
@@ -65,6 +70,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -104,6 +112,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -148,6 +159,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -173,6 +187,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -209,6 +226,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
@@ -266,6 +286,9 @@ public class CategoriesFunction
         {
             if (!_apiKey.IsValid(req))
                 return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (!_adminAuth.ValidateToken(req))
                 return AdminAuth.Unauthorized();
 
