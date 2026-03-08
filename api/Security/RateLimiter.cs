@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace FlyerTracker.Api.Security;
+namespace LostDogTracer.Api.Security;
 
 /// <summary>
 /// Simple in-memory rate limiter. Tracks request count per key (IP or name)

@@ -6,7 +6,7 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>FlyerTracker.Api</RootNamespace>
+    <RootNamespace>LostDogTracer.Api</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

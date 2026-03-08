@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace FlyerTracker.Api.Security;
+namespace LostDogTracer.Api.Security;
 
 /// <summary>
 /// PBKDF2-based password hashing with embedded salt.

@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using FlyerTracker.Api.Security;
+using LostDogTracer.Api.Security;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -17,7 +17,7 @@ var host = new HostBuilder()
 
         // ── Security services ────────────────────────────────────
         // API Key — protects all endpoints against scanners
-        var apiKey = context.Configuration["API_KEY"] ?? "flyertracker-dev-key-2026";
+        var apiKey = context.Configuration["API_KEY"] ?? "lostdogtracer-dev-key-2026";
         services.AddSingleton(new ApiKeyValidator(apiKey));
 
         // Rate Limiter — Read: 120/min, Write: 15/min, Auth: 10/min per IP
@@ -26,7 +26,7 @@ var host = new HostBuilder()
         // Admin Auth — multi-user, Table Storage backed, PBKDF2 hashed
         var tokenSecret = context.Configuration["TOKEN_SECRET"] ?? "ft-local-dev-secret-key-change-in-prod";
         var seedUser = context.Configuration["ADMIN_SEED_USERNAME"] ?? "admin";
-        var seedPass = context.Configuration["ADMIN_SEED_PASSWORD"] ?? "FlyerTracker2026!";
+        var seedPass = context.Configuration["ADMIN_SEED_PASSWORD"] ?? "LostDogTracer2026!";
         services.AddSingleton(sp =>
         {
             var tableService = sp.GetRequiredService<TableServiceClient>();

@@ -335,7 +335,7 @@
 
             let kml = '<?xml version="1.0" encoding="UTF-8"?>\n';
             kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n';
-            kml += `<name>FlyerTracker GPS-Daten</name>\n`;
+            kml += `<name>LostDogTracer GPS-Daten</name>\n`;
             kml += `<description>Export vom ${new Date().toLocaleDateString('de-DE')}</description>\n`;
 
             // Styles per dog
@@ -378,7 +378,7 @@
             });
 
             kml += '</Document>\n</kml>';
-            download(kml, 'FlyerTracker-GPS.kml', 'application/vnd.google-earth.kml+xml');
+            download(kml, 'LostDogTracer-GPS.kml', 'application/vnd.google-earth.kml+xml');
             showToast('KML Export abgeschlossen');
         } catch {
             showToast('KML Export fehlgeschlagen', true);

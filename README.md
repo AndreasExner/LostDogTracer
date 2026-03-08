@@ -1,8 +1,8 @@
-# FlyerTracker
+# LostDogTracer
 
 **GPS Standort Tracker für die Suche nach vermissten Hunden**
 
-FlyerTracker ist eine mobile-first Progressive Web App (PWA), die von Freiwilligen des Vereins *Hundesuchhilfe-Ostfriesland e.V.* zur Dokumentation von GPS-Standorten bei der Suche nach vermissten Hunden eingesetzt wird. Die App läuft als **Azure Static Web App** mit integrierter Azure Functions API und Azure Table Storage.
+LostDogTracer ist eine mobile-first Progressive Web App (PWA), die von Freiwilligen des Vereins *Hundesuchhilfe-Ostfriesland e.V.* zur Dokumentation von GPS-Standorten bei der Suche nach vermissten Hunden eingesetzt wird. Die App läuft als **Azure Static Web App** mit integrierter Azure Functions API und Azure Table Storage.
 
 ---
 
@@ -89,7 +89,7 @@ FlyerTracker ist eine mobile-first Progressive Web App (PWA), die von Freiwillig
 ## Projektstruktur
 
 ```
-FlyerTracker/
+LostDogTracer/
 ├── index.html                    # Hauptseite (GPS erfassen)
 ├── my-records.html               # Eigene Einträge
 ├── my-map.html                   # Eigene Karte
@@ -142,10 +142,10 @@ FlyerTracker/
 │   └── Security/                 # Auth & Rate-Limiting Middleware
 │
 ├── docs/                         # Benutzer-Dokumentation
-│   ├── FlyerTracker - Benutzeransicht.pdf
-│   ├── FlyerTracker - Benutzeransicht.docx
-│   ├── FlyerTracker - Admin Ansicht.pdf
-│   └── FlyerTracker - Admin Ansicht.docx
+│   ├── LostDogTracer - Benutzeransicht.pdf
+│   ├── LostDogTracer - Benutzeransicht.docx
+│   ├── LostDogTracer - Admin Ansicht.pdf
+│   └── LostDogTracer - Admin Ansicht.docx
 │
 └── .github/workflows/
     └── azure-static-web-apps.yml # CI/CD Pipeline
@@ -239,8 +239,8 @@ swa deploy . --api-location api --deployment-token <token>
 ## Dokumentation
 
 Benutzer- und Admin-Dokumentation im Ordner `docs/`:
-- [Benutzeransicht (PDF)](docs/FlyerTracker%20-%20Benutzeransicht.pdf)
-- [Admin Ansicht (PDF)](docs/FlyerTracker%20-%20Admin%20Ansicht.pdf)
+- [Benutzeransicht (PDF)](docs/LostDogTracer%20-%20Benutzeransicht.pdf)
+- [Admin Ansicht (PDF)](docs/LostDogTracer%20-%20Admin%20Ansicht.pdf)
 
 ---
 

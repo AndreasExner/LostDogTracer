@@ -2,7 +2,7 @@
 const FT_OFFLINE = (function () {
     'use strict';
 
-    const DB_NAME = 'flyertracker_offline';
+    const DB_NAME = 'lostdogtracer_offline';
     const DB_VERSION = 1;
     const STORE_QUEUE = 'pendingEntries';
     const STORE_DROPDOWNS = 'dropdownData';

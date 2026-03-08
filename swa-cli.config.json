@@ -1,7 +1,7 @@
 {
     "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
     "configurations": {
-        "flyertracker": {
+        "lostdogtracer": {
             "appLocation": ".",
             "apiLocation": "api",
             "outputLocation": ".",

@@ -1,4 +1,4 @@
-namespace FlyerTracker.Api.Security;
+namespace LostDogTracer.Api.Security;
 
 /// <summary>
 /// Validates the X-API-Key header against the configured key.

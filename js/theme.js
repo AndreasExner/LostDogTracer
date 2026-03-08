@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const STORAGE_KEY = 'flyertracker_theme';
+    const STORAGE_KEY = 'lostdogtracer_theme';
 
     // Apply saved theme on load (before paint)
     function applySavedTheme() {

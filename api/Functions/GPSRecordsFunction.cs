@@ -1,13 +1,13 @@
 using System.Text.Json;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
-using FlyerTracker.Api.Security;
+using LostDogTracer.Api.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
-namespace FlyerTracker.Api.Functions;
+namespace LostDogTracer.Api.Functions;
 
 public class GPSRecordsFunction
 {

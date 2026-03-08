@@ -32,7 +32,7 @@
             const a = document.createElement('a');
             const date = new Date().toISOString().slice(0, 10);
             a.href = url;
-            a.download = `flyertracker-backup-${date}.json`;
+            a.download = `lostdogtracer-backup-${date}.json`;
             a.click();
             URL.revokeObjectURL(url);
 

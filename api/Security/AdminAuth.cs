@@ -4,7 +4,7 @@ using Azure.Data.Tables;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlyerTracker.Api.Security;
+namespace LostDogTracer.Api.Security;
 
 /// <summary>
 /// Admin authentication against an AdminUsers Azure Table.

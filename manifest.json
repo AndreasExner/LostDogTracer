@@ -1,6 +1,6 @@
 {
-    "name": "FlyerTracker",
-    "short_name": "FlyerTracker",
+    "name": "LostDogTracer",
+    "short_name": "LostDogTracer",
     "description": "GPS Standort Tracker für vermisste Hunde",
     "start_url": "/",
     "display": "standalone",
