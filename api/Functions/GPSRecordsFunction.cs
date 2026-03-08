@@ -84,9 +84,9 @@ public class GPSRecordsFunction
                     rowKey = entity.RowKey,
                     name = entity.PartitionKey,
                     lostDog,
-                    latitude = entity.GetDouble("Latitude") ?? 0,
-                    longitude = entity.GetDouble("Longitude") ?? 0,
-                    accuracy = entity.GetDouble("Accuracy") ?? 0,
+                    latitude = GetDoubleSafe(entity, "Latitude"),
+                    longitude = GetDoubleSafe(entity, "Longitude"),
+                    accuracy = GetDoubleSafe(entity, "Accuracy"),
                     recordedAt = entity.GetString("RecordedAt") ?? entity.Timestamp?.ToString("o") ?? "",
                     photoUrl = entity.GetString("PhotoUrl") ?? "",
                     comment = entity.GetString("Comment") ?? "",
@@ -235,9 +235,9 @@ public class GPSRecordsFunction
                     rowKey = entity.RowKey,
                     name = entity.PartitionKey,
                     lostDog,
-                    latitude = entity.GetDouble("Latitude") ?? 0,
-                    longitude = entity.GetDouble("Longitude") ?? 0,
-                    accuracy = entity.GetDouble("Accuracy") ?? 0,
+                    latitude = GetDoubleSafe(entity, "Latitude"),
+                    longitude = GetDoubleSafe(entity, "Longitude"),
+                    accuracy = GetDoubleSafe(entity, "Accuracy"),
                     recordedAt = entity.GetString("RecordedAt") ?? entity.Timestamp?.ToString("o") ?? "",
                     photoUrl = entity.GetString("PhotoUrl") ?? "",
                     comment = entity.GetString("Comment") ?? "",
@@ -456,5 +456,18 @@ public class GPSRecordsFunction
             _logger.LogError(ex, "Error updating GPS records");
             return new StatusCodeResult(500);
         }
+    }
+
+    /// <summary>Safely read a double from a TableEntity, handling Int64/Int32 values from import.</summary>
+    private static double GetDoubleSafe(TableEntity entity, string key)
+    {
+        var val = entity[key];
+        return val switch
+        {
+            double d => d,
+            long l => l,
+            int i => i,
+            _ => 0
+        };
     }
 }

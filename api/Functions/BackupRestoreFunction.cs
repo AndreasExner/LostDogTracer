@@ -135,7 +135,10 @@ public class BackupRestoreFunction
                                 entity[prop.Name] = prop.Value.GetString();
                                 break;
                             case JsonValueKind.Number:
-                                if (prop.Value.TryGetInt64(out var l))
+                                // Always store numeric fields that represent coordinates as Double
+                                if (prop.Name is "Latitude" or "Longitude" or "Accuracy")
+                                    entity[prop.Name] = prop.Value.GetDouble();
+                                else if (prop.Value.TryGetInt64(out var l))
                                     entity[prop.Name] = l;
                                 else
                                     entity[prop.Name] = prop.Value.GetDouble();
