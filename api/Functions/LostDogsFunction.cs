@@ -66,6 +66,40 @@ public class LostDogsFunction
         }
     }
 
+    [Function("GetLostDogByKey")]
+    public async Task<IActionResult> GetLostDogByKey(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs/by-key/{key}")] HttpRequest req,
+        string key)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+
+            if (string.IsNullOrWhiteSpace(key) || key.Length != 6)
+                return new NotFoundObjectResult(new { error = "Ungültiger Key" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
+
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(e => e.GetString("Suffix") == key))
+            {
+                var location = entity.GetString("Location") ?? entity.RowKey;
+                return new OkObjectResult(new { location });
+            }
+
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error looking up lost dog by key {Key}", key);
+            return new StatusCodeResult(500);
+        }
+    }
+
     [Function("GetLostDogsAdmin")]
     public async Task<IActionResult> GetLostDogsAdmin(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "manage/lost-dogs")] HttpRequest req)
