@@ -30,6 +30,7 @@ jobs:
           ESCAPED_KEY=$(printf '%s\n' "$DEPLOY_API_KEY" | sed 's/[&/\]/\\&/g')
           sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/app.js
           sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/auth.js
+          sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/guest-app.js
 
       - name: Inject build version
         run: |
