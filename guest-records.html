@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Einträge</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Einträge</h1>
+            <a href="guest-home.html" class="btn-back" id="backLink">Zurück</a>
+        </div>
+
+        <div class="toolbar">
+            <span class="badge" id="filterInfo" style="background:#e8e8ed;padding:0.35rem 0.75rem;border-radius:8px;font-size:0.875rem;font-weight:500;color:#1d1d1f;"></span>
+
+            <select id="sortField" title="Sortierung">
+                <option value="time-desc" selected>Zeitpunkt ↓ (neueste)</option>
+                <option value="time-asc">Zeitpunkt ↑ (älteste)</option>
+            </select>
+
+            <select id="pageSize" title="Einträge pro Seite">
+                <option value="20" selected>20 pro Seite</option>
+                <option value="40">40 pro Seite</option>
+                <option value="all">Alle anzeigen</option>
+            </select>
+        </div>
+
+        <!-- Data table -->
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" title="Alle auswählen"></th>
+                        <th>Zeitpunkt</th>
+                        <th>Kategorie</th>
+                        <th>Kommentar</th>
+                        <th>Foto</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <span class="info" id="pageInfo"></span>
+            <div class="page-buttons" id="pageButtons"></div>
+        </div>
+
+        <!-- Actions below table -->
+        <div class="toolbar" style="margin-top: 0.75rem;">
+            <button class="btn btn-danger btn-sm" id="deleteSelectedBtn" disabled>Ausgewählte löschen</button>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+
+        <!-- Photo lightbox -->
+        <div id="lightbox" class="lightbox hidden" onclick="this.classList.add('hidden')">
+            <img id="lightboxImg" alt="Foto">
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        // Set back link to guest-home with key
+        (function() {
+            var p = new URLSearchParams(location.search);
+            var key = p.get('key');
+            if (key) document.getElementById('backLink').href = 'guest-home.html?key=' + encodeURIComponent(key);
+        })();
+    </script>
+    <script src="js/my-records.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/guest-nav.js"></script>
+</body>
+</html>

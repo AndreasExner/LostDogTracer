@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const currentPath = location.pathname.split('/').pop() || 'index.html';
+    const currentPath = location.pathname.split('/').pop() || 'my-home.html';
     const urlParams = new URLSearchParams(location.search);
     const paramName = urlParams.get('name') || '';
     const paramDog = urlParams.get('lostDog') || '';
@@ -15,7 +15,7 @@
     drawer.className = 'nav-drawer';
 
     const pages = [
-        { href: 'index.html', icon: '📍', label: 'Standort erfassen' },
+        { href: 'my-home.html', icon: '📍', label: 'Standort erfassen' },
         { href: 'my-records.html', icon: '📝', label: 'Meine Einträge', needsParams: true },
         { href: 'my-map.html', icon: '🗺️', label: 'Meine Karte', needsParams: true },
     ];
@@ -35,7 +35,7 @@
                     // Get name/dog from current page context
                     let name = paramName;
                     let dog = paramDog;
-                    // On index.html, read from dropdowns
+                    // On my-home.html, read from dropdowns
                     const nameEl = document.getElementById('userName');
                     const dogEl = document.getElementById('lostDog');
                     if (nameEl && nameEl.value) name = nameEl.value;

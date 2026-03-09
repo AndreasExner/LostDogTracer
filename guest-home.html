@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="app-container">
+        <div class="form-group">
+            <label>Hundename</label>
+            <div id="dogName" class="form-control" style="background:var(--bg-badge);cursor:default;">—</div>
+        </div>
+
+        <div class="form-group">
+            <label for="category">Kategorie</label>
+            <select id="category" class="form-control">
+                <option value="">Bitte wählen...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="comment">Kommentar (optional)</label>
+            <input type="text" id="comment" class="form-control" maxlength="40" placeholder="Max. 40 Zeichen…" autocomplete="off">
+            <span id="charCounter" class="char-counter">0 / 40</span>
+        </div>
+
+        <!-- Optional photo -->
+        <div class="photo-section">
+            <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+            <button type="button" id="photoBtn" class="btn-photo">📷 Foto hinzufügen (optional)</button>
+            <div id="photoPreview" class="photo-preview hidden">
+                <img id="previewImg" alt="Vorschau">
+                <button type="button" id="removePhotoBtn" class="btn-remove-photo">✕</button>
+            </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <button id="saveBtn" class="btn-save" disabled>STANDORT SPEICHERN</button>
+
+        <div class="action-row">
+            <button id="editBtn" class="btn-action btn-edit" disabled>Bearbeiten</button>
+            <button id="mapBtn" class="btn-action btn-map" disabled>Karte</button>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+
+        <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="display:block;margin-top:1.5rem;height:auto;width:100px;">
+    </div>
+    <script src="js/theme.js"></script>
+    <script src="js/guest-app.js"></script>
+    <script src="js/guest-nav.js"></script>
+</body>
+</html>

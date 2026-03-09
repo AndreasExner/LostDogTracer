@@ -37,6 +37,16 @@
     <!-- Login form -->
     <div class="admin-container" id="loginSection">
         <div class="login-box">
+            <img
+                src="gfx/lostdogtracer-logo-860w.png"
+                srcset="
+                    gfx/lostdogtracer-logo-430w.png   430w,
+                    gfx/lostdogtracer-logo-860w.png    860w,
+                    gfx/lostdogtracer-logo-1290w.png  1290w"
+                sizes="(max-width: 360px) 100vw, 328px"
+                alt="LostDogTracer Logo"
+                style="display: block; margin: 0 auto 1.25rem; max-width: 100%; height: auto; border-radius: 10px;"
+            />
             <h2>🔐 Admin-Anmeldung</h2>
             <input type="text" id="loginUser" placeholder="Benutzername" autocomplete="username">
             <input type="password" id="loginPass" placeholder="Kennwort" autocomplete="current-password">
@@ -48,7 +58,8 @@
     <!-- Admin menu (hidden until logged in) -->
     <div class="admin-container hidden" id="menuSection">
         <div class="admin-header">
-            <h1>LostDogTracer Admin</h1>
+            <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="width:100px;height:auto;border-radius:10px;flex-shrink:0;">
+            <h1>Admin-Portal</h1>
             <button class="logout-btn" id="logoutBtn">Abmelden</button>
         </div>
 

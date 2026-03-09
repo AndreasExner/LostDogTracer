@@ -84,24 +84,26 @@
         maxZoom: 19
     });
     const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenTopoMap (CC-BY-SA)',
+        attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
         maxZoom: 17
     });
-
-    // Google Maps layers (via GoogleMutant)
-    const googleRoads = L.gridLayer.googleMutant({ type: 'roadmap', maxZoom: 21 });
-    const googleSat   = L.gridLayer.googleMutant({ type: 'satellite', maxZoom: 21 });
-    const googleHybrid = L.gridLayer.googleMutant({ type: 'hybrid', maxZoom: 21 });
+    const cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+    });
+    const cartoDarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 20
+    });
 
     osmLayer.addTo(map);
 
     L.control.layers({
         'OSM Straße': osmLayer,
-        'OSM Topographisch': topoLayer,
-        'Esri Satellit': satelliteLayer,
-        'Google Straße': googleRoads,
-        'Google Satellit': googleSat,
-        'Google Hybrid': googleHybrid
+        'OpenTopoMap': topoLayer,
+        'CARTO Positron': cartoPositron,
+        'CARTO Dark Matter': cartoDarkMatter,
+        'Esri Satellit': satelliteLayer
     }, null, { position: 'topright', collapsed: true }).addTo(map);
 
     // Scale bar
