@@ -34,6 +34,15 @@
                 ? `${esc(item.location)} <span style="color:#6e6e73;font-size:0.875rem">(${esc(item.suffix)})</span>`
                 : esc(item.location);
             li.innerHTML = `<span class="item-name">${display}</span>`;
+
+            if (item.suffix) {
+                const linkBtn = document.createElement('button');
+                linkBtn.className = 'btn btn-secondary btn-sm';
+                linkBtn.textContent = '🔗 Link';
+                linkBtn.addEventListener('click', () => copyGuestLink(item.suffix, item.location));
+                li.appendChild(linkBtn);
+            }
+
             const btn = document.createElement('button');
             btn.className = 'btn btn-danger btn-sm';
             btn.textContent = 'Löschen';
@@ -90,6 +99,16 @@
 
     inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addDog(); });
     addBtn.addEventListener('click', addDog);
+
+    async function copyGuestLink(suffix, location) {
+        const url = `${window.location.origin}/guest-home.html?key=${encodeURIComponent(suffix)}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast(`Link für \u201E${location}\u201C kopiert`);
+        } catch {
+            prompt('Link kopieren:', url);
+        }
+    }
 
     function esc(s) {
         return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
