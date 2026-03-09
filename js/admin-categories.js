@@ -15,19 +15,21 @@
     /** Sanitize SVG inner content – remove scripts, event handlers, and dangerous elements */
     function sanitizeSvgInner(svgInner) {
         if (!svgInner) return '';
-        const wrapper = `<svg xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>`;
-        const doc = new DOMParser().parseFromString(wrapper, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        if (!svgEl || doc.querySelector('parsererror')) return '';
-        svgEl.querySelectorAll('script, foreignObject, iframe, object, embed, use').forEach(el => el.remove());
-        svgEl.querySelectorAll('*').forEach(el => {
-            [...el.attributes].forEach(attr => {
-                if (attr.name.startsWith('on') || String(attr.value).match(/^\s*javascript:/i)) {
+        var template = document.createElement('template');
+        template.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg">' + svgInner + '</svg>';
+        var svgEl = template.content.querySelector('svg');
+        if (!svgEl) return '';
+        svgEl.querySelectorAll('script, foreignObject, iframe, object, embed, use').forEach(function (el) { el.remove(); });
+        svgEl.querySelectorAll('*').forEach(function (el) {
+            var attrs = [].slice.call(el.attributes);
+            attrs.forEach(function (attr) {
+                if (attr.name.startsWith('on') || /^\s*javascript:/i.test(String(attr.value))) {
                     el.removeAttribute(attr.name);
                 }
             });
         });
-        return svgEl.innerHTML;
+        var serializer = new XMLSerializer();
+        return [].slice.call(svgEl.childNodes).map(function (n) { return serializer.serializeToString(n); }).join('');
     }
 
     /** Render a marker-shaped SVG preview */

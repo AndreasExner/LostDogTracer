@@ -109,8 +109,12 @@
         const file = photoInputEl.files[0];
         if (!file || !file.type.startsWith('image/')) return;
 
-        const blobUrl = URL.createObjectURL(file);
-        previewImgEl.src = blobUrl;
+        // Show preview via FileReader (safe data-URL, no taint)
+        const reader = new FileReader();
+        reader.onload = function () {
+            previewImgEl.src = reader.result;
+        };
+        reader.readAsDataURL(file);
         photoPreviewEl.classList.remove('hidden');
         photoBtnEl.textContent = '📷 Foto ändern';
 
@@ -126,9 +130,6 @@
         photoInputEl.value = '';
         photoPreviewEl.classList.add('hidden');
         photoBtnEl.textContent = '📷 Foto hinzufügen (optional)';
-        if (previewImgEl.src.startsWith('blob:')) {
-            URL.revokeObjectURL(previewImgEl.src);
-        }
         previewImgEl.src = '';
     }
 
