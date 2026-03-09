@@ -10,11 +10,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const guestKey = urlParams.get('key') || '';
 
-    if (!guestKey) {
-        window.location.href = 'index.html';
-        return;
-    }
-
     const dogNameEl = document.getElementById('dogName');
     const categoryEl = document.getElementById('category');
     const commentEl = document.getElementById('comment');
@@ -43,7 +38,10 @@
     // ── Initialisation ───────────────────────────────────────────
     async function init() {
         const valid = await resolveDogByKey();
-        if (!valid) return;
+        if (!valid) {
+            setInvalidState();
+            return;
+        }
 
         await loadCategories();
         restoreCategory();
@@ -61,22 +59,30 @@
         removePhotoBtnEl.addEventListener('click', removePhoto);
     }
 
+    function setInvalidState() {
+        dogNameEl.textContent = 'Unbekannter Hund';
+        dogNameEl.style.borderColor = '#ff3b30';
+        dogNameEl.style.color = '#ff3b30';
+        dogNameEl.style.boxShadow = '0 0 0 3px rgba(255,59,48,.12)';
+        saveBtnEl.disabled = true;
+        categoryEl.disabled = true;
+        commentEl.disabled = true;
+        photoBtnEl.disabled = true;
+    }
+
     // ── Resolve dog name via key ─────────────────────────────────
     async function resolveDogByKey() {
+        if (!guestKey) return false;
         try {
             const res = await fetch(`${API_BASE}/lost-dogs/by-key/${encodeURIComponent(guestKey)}`, {
                 headers: { 'X-API-Key': API_KEY }
             });
-            if (!res.ok) {
-                window.location.href = 'index.html';
-                return false;
-            }
+            if (!res.ok) return false;
             const data = await res.json();
             resolvedDogName = data.location;
             dogNameEl.textContent = resolvedDogName;
             return true;
         } catch {
-            window.location.href = 'index.html';
             return false;
         }
     }
