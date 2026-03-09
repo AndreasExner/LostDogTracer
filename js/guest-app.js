@@ -107,9 +107,10 @@
     // ── Photo handling ───────────────────────────────────────────
     async function onPhotoSelected() {
         const file = photoInputEl.files[0];
-        if (!file) return;
+        if (!file || !file.type.startsWith('image/')) return;
 
-        previewImgEl.src = URL.createObjectURL(file);
+        const blobUrl = URL.createObjectURL(file);
+        previewImgEl.src = blobUrl;
         photoPreviewEl.classList.remove('hidden');
         photoBtnEl.textContent = '📷 Foto ändern';
 

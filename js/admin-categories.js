@@ -12,10 +12,28 @@
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
 
+    /** Sanitize SVG inner content – remove scripts, event handlers, and dangerous elements */
+    function sanitizeSvgInner(svgInner) {
+        if (!svgInner) return '';
+        const wrapper = `<svg xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>`;
+        const doc = new DOMParser().parseFromString(wrapper, 'image/svg+xml');
+        const svgEl = doc.querySelector('svg');
+        if (!svgEl || doc.querySelector('parsererror')) return '';
+        svgEl.querySelectorAll('script, foreignObject, iframe, object, embed, use').forEach(el => el.remove());
+        svgEl.querySelectorAll('*').forEach(el => {
+            [...el.attributes].forEach(attr => {
+                if (attr.name.startsWith('on') || String(attr.value).match(/^\s*javascript:/i)) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+        return svgEl.innerHTML;
+    }
+
     /** Render a marker-shaped SVG preview */
     function markerPreview(svgInner, color) {
         color = color || '#0071e3';
-        const inner = svgInner || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
+        const inner = sanitizeSvgInner(svgInner) || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
         return `<svg width="30" height="44" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">` +
             `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}"/>` +
             inner + `</svg>`;

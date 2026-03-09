@@ -147,8 +147,10 @@ public class SaveLocationFunction
 
             await tableClient.AddEntityAsync(entity);
 
-            _logger.LogInformation("Location saved: {Name} at {Lat},{Lon} ({LostDog}) Photo:{HasPhoto}",
-                name, latitude, longitude, lostDog, photoUrl is not null);
+            _logger.LogInformation("Location saved: {Name} ({LostDog}) Photo:{HasPhoto}",
+                name?.Replace("\n", "").Replace("\r", ""),
+                lostDog?.Replace("\n", "").Replace("\r", ""),
+                photoUrl is not null);
 
             return new CreatedResult("", new { message = "Standort gespeichert" });
         }
