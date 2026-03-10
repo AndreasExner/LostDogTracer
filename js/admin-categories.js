@@ -5,74 +5,48 @@
 
     const listEl = document.getElementById('categoryList');
     const inputEl = document.getElementById('newCategory');
-    const svgInputEl = document.getElementById('newSvg');
+    const newIconKeyEl = document.getElementById('newIconKey');
+    const newPickerEl = document.getElementById('newIconPicker');
     const previewEl = document.getElementById('newPreview');
-    const svgFileEl = document.getElementById('newSvgFile');
     const addBtn = document.getElementById('addBtn');
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
 
-    /** Sanitize SVG inner content – remove scripts, event handlers, and dangerous elements */
-    function sanitizeSvgInner(svgInner) {
-        if (!svgInner) return '';
-        var template = document.createElement('template');
-        template.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg">' + svgInner + '</svg>';
-        var svgEl = template.content.querySelector('svg');
-        if (!svgEl) return '';
-        svgEl.querySelectorAll('script, foreignObject, iframe, object, embed, use').forEach(function (el) { el.remove(); });
-        svgEl.querySelectorAll('*').forEach(function (el) {
-            var attrs = [].slice.call(el.attributes);
-            attrs.forEach(function (attr) {
-                if (attr.name.startsWith('on') || /^\s*javascript:/i.test(String(attr.value))) {
-                    el.removeAttribute(attr.name);
-                }
-            });
-        });
-        var serializer = new XMLSerializer();
-        return [].slice.call(svgEl.childNodes).map(function (n) { return serializer.serializeToString(n); }).join('');
-    }
-
-    /** Render a marker-shaped SVG preview */
-    function markerPreview(svgInner, color) {
+    /** Render a marker-shaped SVG preview from an icon key */
+    function markerPreview(iconKey, color) {
         color = color || '#0071e3';
-        const inner = sanitizeSvgInner(svgInner) || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
-        return `<svg width="30" height="44" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">` +
-            `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}"/>` +
-            inner + `</svg>`;
+        const inner = resolveIconSvg(iconKey);
+        return '<svg width="30" height="44" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="' + color + '"/>' +
+            inner + '</svg>';
     }
 
-    /** Extract inner elements from an SVG file string (strip the outer <svg> wrapper) */
-    function extractSvgInner(svgText) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(svgText, 'image/svg+xml');
-        const svgEl = doc.querySelector('svg');
-        if (!svgEl) return svgText.trim();
-        return svgEl.innerHTML.trim();
+    /** Build an icon picker into a container element, call onChange(key) on selection */
+    function buildIconPicker(container, selectedKey, onChange) {
+        container.innerHTML = '';
+        Object.keys(SVG_ICONS).forEach(function (key) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'icon-picker-btn' + (key === selectedKey ? ' selected' : '');
+            btn.title = SVG_ICONS[key].label;
+            btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
+                '<rect width="24" height="24" rx="4" fill="#0071e3"/>' +
+                SVG_ICONS[key].svg + '</svg>';
+            btn.addEventListener('click', function () {
+                container.querySelectorAll('.icon-picker-btn').forEach(function (b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                onChange(key);
+            });
+            container.appendChild(btn);
+        });
     }
 
-    /** Handle SVG file upload → fill textarea + update preview */
-    function handleSvgFile(file, textarea, previewEl) {
-        if (!file || !file.name.toLowerCase().endsWith('.svg')) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            const inner = extractSvgInner(reader.result);
-            textarea.value = inner;
-            textarea.dispatchEvent(new Event('input'));
-        };
-        reader.readAsText(file);
-    }
-
-    // File upload for new category
-    svgFileEl.addEventListener('change', () => {
-        handleSvgFile(svgFileEl.files[0], svgInputEl, previewEl);
-        svgFileEl.value = '';
+    // Build icon picker for new category
+    buildIconPicker(newPickerEl, 'default', function (key) {
+        newIconKeyEl.value = key;
+        previewEl.innerHTML = markerPreview(key);
     });
-
-    // Live preview while typing new SVG
-    svgInputEl.addEventListener('input', () => {
-        previewEl.innerHTML = markerPreview(svgInputEl.value.trim());
-    });
-    previewEl.innerHTML = markerPreview('');
+    previewEl.innerHTML = markerPreview('default');
 
     async function loadCategories() {
         listEl.innerHTML = '<li style="color:#6e6e73">Lädt…</li>';
@@ -94,81 +68,86 @@
             return;
         }
         items.forEach(item => {
+            const currentIcon = (SVG_ICONS[item.svgSymbol] ? item.svgSymbol : 'default');
             const li = document.createElement('li');
             li.className = 'category-item';
-            li.innerHTML =
-                `<div class="svg-preview">${markerPreview(item.svgSymbol)}</div>` +
-                `<div style="flex:1">` +
-                    `<div class="item-name">${esc(item.name)}</div>` +
-                    `<textarea rows="2" data-rk="${esc(item.rowKey)}">${esc(item.svgSymbol || '')}</textarea>` +
-                    `<label class="upload-label">SVG-Datei… <input type="file" accept=".svg" class="upload-svg-input"></label>` +
-                `</div>` +
-                `<div class="category-actions">` +
-                    `<button class="btn btn-primary btn-sm save-svg-btn" data-rk="${esc(item.rowKey)}">SVG speichern</button>` +
-                    `<button class="btn btn-danger btn-sm del-btn" data-rk="${esc(item.rowKey)}" data-name="${esc(item.name)}">Löschen</button>` +
-                `</div>`;
 
-            // Live preview on textarea input
-            const ta = li.querySelector('textarea');
-            const prev = li.querySelector('.svg-preview');
-            ta.addEventListener('input', () => {
-                prev.innerHTML = markerPreview(ta.value.trim());
+            const prev = document.createElement('div');
+            prev.className = 'svg-preview';
+            prev.innerHTML = markerPreview(currentIcon);
+
+            const mid = document.createElement('div');
+            mid.style.flex = '1';
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'item-name';
+            nameDiv.textContent = item.name;
+            const picker = document.createElement('div');
+            picker.className = 'icon-picker';
+
+            mid.appendChild(nameDiv);
+            mid.appendChild(picker);
+
+            const actions = document.createElement('div');
+            actions.className = 'category-actions';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn btn-primary btn-sm save-svg-btn';
+            saveBtn.textContent = 'Icon speichern';
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-sm del-btn';
+            delBtn.textContent = 'Löschen';
+
+            actions.appendChild(saveBtn);
+            actions.appendChild(delBtn);
+
+            li.appendChild(prev);
+            li.appendChild(mid);
+            li.appendChild(actions);
+
+            let selectedIcon = currentIcon;
+            buildIconPicker(picker, currentIcon, function (key) {
+                selectedIcon = key;
+                prev.innerHTML = markerPreview(key);
             });
 
-            // File upload for existing category
-            const fileInput = li.querySelector('.upload-svg-input');
-            fileInput.addEventListener('change', () => {
-                handleSvgFile(fileInput.files[0], ta, prev);
-                fileInput.value = '';
+            saveBtn.addEventListener('click', async function () {
+                saveBtn.disabled = true;
+                try {
+                    const res = await fetch(`${API_BASE}/manage/categories/${encodeURIComponent(item.rowKey)}`, {
+                        method: 'PUT',
+                        headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ svgSymbol: selectedIcon })
+                    });
+                    if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+                    if (!res.ok) throw new Error();
+                    showToast('Icon gespeichert');
+                } catch {
+                    showToast('Fehler beim Speichern', true);
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+
+            delBtn.addEventListener('click', async function () {
+                if (!confirm('\u201E' + item.name + '\u201C wirklich löschen?')) return;
+                try {
+                    const res = await fetch(`${API_BASE}/manage/categories/${encodeURIComponent(item.rowKey)}`, {
+                        method: 'DELETE',
+                        headers: FT_AUTH.adminHeaders()
+                    });
+                    if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+                    if (!res.ok) throw new Error();
+                    showToast('\u201E' + item.name + '\u201C gelöscht');
+                    await loadCategories();
+                } catch {
+                    showToast('Fehler beim Löschen', true);
+                }
             });
 
             listEl.appendChild(li);
         });
     }
-
-    // Delegate clicks for save-svg and delete buttons
-    listEl.addEventListener('click', async (e) => {
-        const saveBtn = e.target.closest('.save-svg-btn');
-        if (saveBtn) {
-            const rk = saveBtn.dataset.rk;
-            const ta = listEl.querySelector(`textarea[data-rk="${rk}"]`);
-            if (!ta) return;
-            saveBtn.disabled = true;
-            try {
-                const res = await fetch(`${API_BASE}/manage/categories/${encodeURIComponent(rk)}`, {
-                    method: 'PUT',
-                    headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ svgSymbol: ta.value })
-                });
-                if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
-                if (!res.ok) throw new Error();
-                showToast('SVG gespeichert');
-            } catch {
-                showToast('Fehler beim Speichern', true);
-            } finally {
-                saveBtn.disabled = false;
-            }
-        }
-
-        const delBtn = e.target.closest('.del-btn');
-        if (delBtn) {
-            const rk = delBtn.dataset.rk;
-            const name = delBtn.dataset.name;
-            if (!confirm(`„${name}" wirklich löschen?`)) return;
-            try {
-                const res = await fetch(`${API_BASE}/manage/categories/${encodeURIComponent(rk)}`, {
-                    method: 'DELETE',
-                    headers: FT_AUTH.adminHeaders()
-                });
-                if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
-                if (!res.ok) throw new Error();
-                showToast(`„${name}" gelöscht`);
-                await loadCategories();
-            } catch {
-                showToast('Fehler beim Löschen', true);
-            }
-        }
-    });
 
     async function addCategory() {
         const name = inputEl.value.trim();
@@ -184,14 +163,18 @@
             const res = await fetch(`${API_BASE}/manage/categories`, {
                 method: 'POST',
                 headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ name, svgSymbol: svgInputEl.value.trim() })
+                body: JSON.stringify({ name, svgSymbol: newIconKeyEl.value })
             });
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
             inputEl.value = '';
-            svgInputEl.value = '';
-            previewEl.innerHTML = markerPreview('');
-            showToast(`„${name}" hinzugefügt`);
+            newIconKeyEl.value = 'default';
+            buildIconPicker(newPickerEl, 'default', function (key) {
+                newIconKeyEl.value = key;
+                previewEl.innerHTML = markerPreview(key);
+            });
+            previewEl.innerHTML = markerPreview('default');
+            showToast('\u201E' + name + '\u201C hinzugefügt');
             await loadCategories();
         } catch {
             showToast('Fehler beim Hinzufügen', true);
@@ -203,10 +186,6 @@
 
     inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addCategory(); });
     addBtn.addEventListener('click', addCategory);
-
-    function esc(s) {
-        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    }
 
     function showToast(msg, isError) {
         clearTimeout(toastTimeout);
