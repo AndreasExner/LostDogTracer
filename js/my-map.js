@@ -46,7 +46,8 @@
     let categorySymbols = {};
 
     function colorIcon(color, category) {
-        const inner = categorySymbols[category] || `<circle cx="12" cy="12" r="5" fill="#fff"/>`;
+        const iconKey = categorySymbols[category] || 'default';
+        const inner = resolveIconSvg(iconKey);
         return L.divIcon({
             className: '',
             html: `<svg width="24" height="36" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">

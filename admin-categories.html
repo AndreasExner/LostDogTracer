@@ -11,11 +11,17 @@
         .svg-preview { width:36px; height:48px; flex-shrink:0; }
         .svg-preview svg { display:block; }
         .category-item { display:flex; align-items:center; gap:0.75rem; padding:0.5rem 0; }
-        .category-item .item-name { flex:1; font-weight:600; }
-        .category-item textarea { width:100%; font-family:monospace; font-size:0.75rem; margin-top:0.35rem; }
+        .category-item .item-name { font-weight:600; }
         .category-actions { display:flex; gap:0.4rem; flex-shrink:0; }
-        .upload-label { cursor:pointer; font-size:0.75rem; color:#0071e3; text-decoration:underline; margin-top:0.2rem; display:inline-block; }
-        .upload-label input { display:none; }
+        .icon-picker { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.35rem; }
+        .icon-picker-btn {
+            width:40px; height:40px; border:2px solid #d2d2d7; border-radius:8px;
+            background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+            padding:2px; transition: border-color 0.15s;
+        }
+        .icon-picker-btn:hover { border-color:#0071e3; }
+        .icon-picker-btn.selected { border-color:#0071e3; background:#e8f2ff; }
+        .icon-picker-btn svg { display:block; }
     </style>
 </head>
 <body>
@@ -29,11 +35,8 @@
         <div class="add-row" style="flex-wrap:wrap;gap:0.5rem;">
             <input type="text" id="newCategory" placeholder="Neue Kategorie…" maxlength="100"
                    autocomplete="off" style="flex:1;min-width:150px;">
-            <textarea id="newSvg" placeholder="SVG-Symbol (innere Elemente, cx=12 cy=12)" rows="2"
-                      style="flex:1 1 100%;font-family:monospace;font-size:0.8rem;"></textarea>
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
-                SVG-Datei… <input type="file" id="newSvgFile" accept=".svg" hidden>
-            </label>
+            <div id="newIconPicker" class="icon-picker"></div>
+            <input type="hidden" id="newIconKey" value="default">
             <div id="newPreview" class="svg-preview"></div>
             <button class="btn btn-primary" id="addBtn">Hinzufügen</button>
         </div>
@@ -46,6 +49,7 @@
     <script>
         FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'admin.html'; });
     </script>
+    <script src="js/svg-icons.js"></script>
     <script src="js/admin-categories.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/admin-nav.js"></script>
