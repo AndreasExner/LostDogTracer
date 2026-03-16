@@ -2,18 +2,17 @@
 (function () {
     // Inject on sub-pages and index.html menu page
     const path = location.pathname;
-    const isSubPage = /(?:gpsrecords|map|names|lostdogs|categories|users|backup|profile)\.html$/i.test(path);
+    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|backup|profile)\.html$/i.test(path);
     const isHome = /index\.html$/i.test(path) || path === '/' || path.endsWith('/');
     if (!isSubPage && !isHome) return;
 
     const pages = [
+        { href: 'field-home.html', icon: '🚩', label: 'Erfassen' },
         { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten' },
-        { href: 'names.html',      icon: '👤', label: 'Namen' },
         { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde' },
         { href: 'categories.html', icon: '🏷️', label: 'Kategorien' },
         { href: 'users.html',      icon: '🔑', label: 'Benutzer' },
         { href: 'backup.html',     icon: '🔧', label: 'Wartung' },
-        { href: 'field-home.html', icon: '📡', label: 'Feldarbeit' },
         { href: 'profile.html',    icon: '👤', label: 'Mein Profil' },
     ];
 

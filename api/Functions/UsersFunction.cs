@@ -223,6 +223,14 @@ public class UsersFunction
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
 
+            var type = req.Query["type"].FirstOrDefault();
+            if (string.Equals(type, "username", StringComparison.OrdinalIgnoreCase))
+            {
+                // Return usernames (RowKey), excluding "admin"
+                var usernames = await _auth.GetUserLoginNamesAsync();
+                return new OkObjectResult(usernames);
+            }
+
             var names = await _auth.GetUserNamesAsync();
             return new OkObjectResult(names);
         }

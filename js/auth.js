@@ -44,13 +44,14 @@ const FT_AUTH = (function () {
     async function isLoggedIn() {
         const token = sessionStorage.getItem(TOKEN_KEY);
         if (!token) return false;
+        if (!navigator.onLine) return true; // Offline: trust cached token
         try {
             const res = await fetch(`${API_BASE}/auth/verify`, {
                 headers: { 'X-API-Key': API_KEY, 'X-Admin-Token': token }
             });
             return res.ok;
         } catch {
-            return false;
+            return true; // Network error but token exists: allow access
         }
     }
 

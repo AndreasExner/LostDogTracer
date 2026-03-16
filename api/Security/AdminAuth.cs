@@ -315,6 +315,27 @@ public class AdminAuth
         return names;
     }
 
+    /// <summary>Return login usernames (RowKey), excluding "admin".</summary>
+    public async Task<List<string>> GetUserLoginNamesAsync()
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var names = new List<string>();
+
+        await foreach (var entity in table.QueryAsync<TableEntity>(
+            filter: $"PartitionKey eq '{Partition}'",
+            select: new[] { "RowKey" }))
+        {
+            var username = entity.RowKey;
+            if (!string.IsNullOrWhiteSpace(username) &&
+                !string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase))
+                names.Add(username);
+        }
+
+        names.Sort(StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false));
+        return names;
+    }
+
     // ── Token creation & validation ──────────────────────────────
 
     private string CreateToken(string username)
