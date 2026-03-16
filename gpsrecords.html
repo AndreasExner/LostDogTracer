@@ -159,7 +159,7 @@
     </div>
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'index.html'; });
+        FT_AUTH.requireRole(2);
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/gpsrecords.js"></script>

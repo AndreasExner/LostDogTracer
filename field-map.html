@@ -43,7 +43,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'index.html'; });
+        FT_AUTH.requireRole(1);
     </script>
     <script src="js/svg-icons.js"></script>
     <script src="js/field-map.js"></script>

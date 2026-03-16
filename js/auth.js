@@ -8,6 +8,7 @@ const FT_AUTH = (function () {
     const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';
     const TOKEN_KEY = 'lostdogtracer_admin_token';
+    const ROLE_KEY = 'lostdogtracer_role';
     const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
 
     /** Headers for public (non-admin) fetch calls */
@@ -35,6 +36,7 @@ const FT_AUTH = (function () {
         const data = await res.json();
         if (data.token) {
             sessionStorage.setItem(TOKEN_KEY, data.token);
+            if (data.role) sessionStorage.setItem(ROLE_KEY, data.role);
             return data.token;
         }
         return null;
@@ -57,6 +59,28 @@ const FT_AUTH = (function () {
 
     function logout() {
         sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(ROLE_KEY);
+    }
+
+    /** Get cached role string */
+    function getRole() {
+        return sessionStorage.getItem(ROLE_KEY) || 'User';
+    }
+
+    /** Get numeric role level: User=1, Manager=2, Administrator=3 */
+    function getRoleLevel() {
+        const r = getRole();
+        if (r === 'Administrator') return 3;
+        if (r === 'Manager') return 2;
+        return 1;
+    }
+
+    /** Check login + minimum role level. Redirects if insufficient. */
+    async function requireRole(minLevel) {
+        const ok = await isLoggedIn();
+        if (!ok) { location.href = 'index.html'; return false; }
+        if (getRoleLevel() < minLevel) { location.href = 'index.html'; return false; }
+        return true;
     }
 
     /** Handle 401 — show brief message, then redirect */
@@ -73,5 +97,5 @@ const FT_AUTH = (function () {
 
     function getApiBase() { return API_BASE; }
 
-    return { publicHeaders, adminHeaders, login, isLoggedIn, logout, sessionExpired, getApiBase };
+    return { publicHeaders, adminHeaders, login, isLoggedIn, logout, sessionExpired, getApiBase, getRole, getRoleLevel, requireRole };
 })();

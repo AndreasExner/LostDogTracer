@@ -16,7 +16,7 @@ public class BackupRestoreFunction
     private readonly AdminAuth _adminAuth;
     private readonly RateLimitProvider _rateLimit;
 
-    private static readonly string[] BackupTables = { "GPSRecords", "Names", "LostDogs", "Categories" };
+    private static readonly string[] BackupTables = { "GPSRecords", "Users", "LostDogs", "Categories" };
 
     public BackupRestoreFunction(TableServiceClient tableService,
         ILogger<BackupRestoreFunction> logger, ApiKeyValidator apiKey,
@@ -41,8 +41,8 @@ public class BackupRestoreFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return new UnauthorizedResult();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var backup = new Dictionary<string, List<Dictionary<string, object?>>>();
 
@@ -98,8 +98,8 @@ public class BackupRestoreFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return new UnauthorizedResult();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var doc = await JsonDocument.ParseAsync(req.Body);
             var root = doc.RootElement;

@@ -17,7 +17,19 @@ public class AdminAuth
     private const string TableName = "Users";
     private const string Partition = "users";
 
-    public static readonly string[] ValidRoles = { "Guest", "User", "Manager", "Administrator" };
+    public static readonly string[] ValidRoles = { "User", "Manager", "Administrator" };
+
+    public static int GetRoleLevel(string? role) => role switch
+    {
+        "Administrator" => 3,
+        "Manager" => 2,
+        "User" => 1,
+        _ => 0
+    };
+
+    /// <summary>Returns 403 Forbidden result for insufficient role.</summary>
+    public static IActionResult Forbidden() =>
+        new ObjectResult(new { error = "Keine Berechtigung für diese Aktion." }) { StatusCode = 403 };
 
     private readonly TableServiceClient _tableService;
     private readonly byte[] _tokenSecret;
@@ -123,6 +135,17 @@ public class AdminAuth
                 token = authHeader["Bearer ".Length..].Trim();
         }
         return !string.IsNullOrEmpty(token) && IsTokenValid(token);
+    }
+
+    /// <summary>Validate token AND check minimum role level. Returns role level (0 = invalid).</summary>
+    public async Task<int> ValidateTokenWithRole(HttpRequest req, int minLevel = 1)
+    {
+        if (!ValidateToken(req)) return 0;
+        var username = GetUsernameFromToken(req);
+        if (username is null) return 0;
+        var role = await GetUserRoleAsync(username);
+        var level = GetRoleLevel(role);
+        return level >= minLevel ? level : 0;
     }
 
     /// <summary>Returns 401 Unauthorized result.</summary>

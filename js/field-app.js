@@ -96,7 +96,7 @@
     async function loadNames() {
         try {
             userNameEl.classList.add('loading');
-            const res = await fetch(`${API_BASE}/user-names?type=username`, { headers: API_KEY_HDR });
+            const res = await fetch(`${API_BASE}/user-names`, { headers: API_KEY_HDR });
             if (!res.ok) throw new Error();
             const names = await res.json();
             if (typeof FT_OFFLINE !== 'undefined') FT_OFFLINE.saveDropdownData('field_names', names);

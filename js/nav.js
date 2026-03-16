@@ -7,14 +7,16 @@
     if (!isSubPage && !isHome) return;
 
     const pages = [
-        { href: 'field-home.html', icon: '🚩', label: 'Erfassen' },
-        { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten' },
-        { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde' },
-        { href: 'categories.html', icon: '🏷️', label: 'Kategorien' },
-        { href: 'users.html',      icon: '🔑', label: 'Benutzer' },
-        { href: 'backup.html',     icon: '🔧', label: 'Wartung' },
-        { href: 'profile.html',    icon: '👤', label: 'Mein Profil' },
+        { href: 'field-home.html', icon: '🚩', label: 'Erfassen', minRole: 1 },
+        { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten', minRole: 2 },
+        { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', minRole: 2 },
+        { href: 'categories.html', icon: '🏷️', label: 'Kategorien', minRole: 3 },
+        { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 2 },
+        { href: 'backup.html',     icon: '🔧', label: 'Wartung', minRole: 3 },
+        { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
     ];
+
+    const roleLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
 
     // Build DOM
     const overlay = document.createElement('div');
@@ -26,9 +28,10 @@
     // Home link
     drawer.innerHTML = `<a href="index.html"${isHome ? ' class="active"' : ''}><span class="nav-icon">🏠</span> Übersicht</a><div class="nav-divider"></div>`;
 
-    // Page links
+    // Page links (filtered by role)
     const currentFile = path.split('/').pop();
     pages.forEach(p => {
+        if (roleLevel < (p.minRole || 1)) return;
         const a = document.createElement('a');
         a.href = p.href;
         a.innerHTML = `<span class="nav-icon">${p.icon}</span> ${p.label}`;

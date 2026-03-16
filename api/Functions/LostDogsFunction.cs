@@ -112,8 +112,8 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
+                return AdminAuth.Forbidden();
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
@@ -151,8 +151,8 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var location = body.GetProperty("location").GetString();
@@ -199,8 +199,8 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
+                return AdminAuth.Forbidden();
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.DeleteEntityAsync("locations", rowKey);
             _logger.LogInformation("Lost dog deleted: RowKey={RowKey}", rowKey);

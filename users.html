@@ -94,7 +94,6 @@
             <input type="text" id="newDisplayName" placeholder="Anzeigename" autocomplete="off">
             <input type="password" id="newUserPw" placeholder="Kennwort (min. 8 Zeichen)" autocomplete="new-password">
             <select id="newUserRole" style="width:100%;padding:0.75rem 1rem;font-size:1rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;">
-                <option value="Guest">Guest</option>
                 <option value="User" selected>User</option>
                 <option value="Manager">Manager</option>
                 <option value="Administrator">Administrator</option>
@@ -126,7 +125,6 @@
             <h3>Benutzer bearbeiten: <span id="editUserName"></span></h3>
             <input type="text" id="editDisplayName" placeholder="Anzeigename" autocomplete="off">
             <select id="editUserRole" style="width:100%;padding:0.75rem 1rem;font-size:1rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;">
-                <option value="Guest">Guest</option>
                 <option value="User">User</option>
                 <option value="Manager">Manager</option>
                 <option value="Administrator">Administrator</option>
@@ -141,7 +139,7 @@
 
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'index.html'; });
+        FT_AUTH.requireRole(2);
     </script>
     <script src="js/users.js"></script>
     <script src="js/theme.js"></script>

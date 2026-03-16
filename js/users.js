@@ -67,11 +67,16 @@
             userList.innerHTML = '<p style="color:#6e6e73;text-align:center;padding:2rem">Keine Benutzer.</p>';
             return;
         }
+        const myLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
+        const isAdmin = myLevel >= 3;
         userList.innerHTML = users.map(u => {
             const isSelf = u.username.toLowerCase() === currentUsername.toLowerCase();
             const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—';
             const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('de-DE') : 'Nie';
             const role = u.role || 'User';
+            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}')">Bearbeiten</button>` : '';
+            const pwBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort</button>` : '';
+            const delBtn = (isAdmin && !isSelf) ? `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>` : '';
             return `
             <div class="user-card">
                 <div class="user-info">
@@ -79,9 +84,7 @@
                     <small>@${esc(u.username)} · ${esc(role)} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
                 </div>
                 <div class="user-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}')">Bearbeiten</button>
-                    <button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort</button>
-                    ${isSelf ? '' : `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>`}
+                    ${editBtn}${pwBtn}${delBtn}
                 </div>
             </div>`;
         }).join('');
@@ -127,6 +130,14 @@
         document.getElementById('newUsername').value = '';
         document.getElementById('newDisplayName').value = '';
         document.getElementById('newUserPw').value = '';
+        // Manager: hide role dropdown (can only assign "User")
+        const roleSelect = document.getElementById('newUserRole');
+        if (FT_AUTH.getRoleLevel() < 3) {
+            roleSelect.value = 'User';
+            roleSelect.style.display = 'none';
+        } else {
+            roleSelect.style.display = '';
+        }
         hideError('createUserError');
         openModal(createUserModal);
     });

@@ -67,7 +67,7 @@
     </div>
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'index.html'; });
+        FT_AUTH.requireRole(1);
     </script>
     <script src="js/my-records.js"></script>
     <script src="js/theme.js"></script>

@@ -73,8 +73,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
@@ -113,8 +113,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var name = body.GetProperty("name").GetString();
@@ -160,8 +160,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.DeleteEntityAsync("categories", rowKey);
@@ -188,8 +188,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var tableClient = _tableService.GetTableClient("Categories");
@@ -227,8 +227,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
@@ -287,8 +287,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var defaults = new Dictionary<string, string>
             {

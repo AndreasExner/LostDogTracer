@@ -47,7 +47,7 @@
     </div>
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'index.html'; });
+        FT_AUTH.requireRole(3);
     </script>
     <script src="js/backup.js"></script>
     <script src="js/theme.js"></script>
