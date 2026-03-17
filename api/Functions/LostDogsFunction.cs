@@ -41,7 +41,7 @@ public class LostDogsFunction
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
-            var items = new List<(string display, string displayName, string suffix)>();
+            var items = new List<(string rowKey, string display, string displayName, string suffix)>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
@@ -50,14 +50,14 @@ public class LostDogsFunction
                 if (!string.IsNullOrWhiteSpace(displayName))
                 {
                     var display = string.IsNullOrEmpty(suffix) ? displayName : $"{displayName} ({suffix})";
-                    items.Add((display, displayName, suffix));
+                    items.Add((entity.RowKey, display, displayName, suffix));
                 }
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             items.Sort((a, b) => comparer.Compare(a.display, b.display));
 
-            return new OkObjectResult(items.Select(i => new { rowKey = $"{i.displayName}_{i.suffix}", displayName = i.displayName }));
+            return new OkObjectResult(items.Select(i => new { rowKey = i.rowKey, displayName = i.displayName }));
         }
         catch (Exception ex)
         {
