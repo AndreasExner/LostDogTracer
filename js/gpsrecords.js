@@ -486,7 +486,7 @@
             const dogs = await dogsRes.json();
             const cats = await catsRes.json();
 
-            names.filter(n => n.toLowerCase() !== 'admin').forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; entryNameEl.appendChild(o); });
+            names.filter(n => (n.rowKey || n).toLowerCase() !== 'admin').forEach(n => { const o = document.createElement('option'); o.value = n.rowKey || n; o.textContent = n.displayName || n; entryNameEl.appendChild(o); });
             dogs.forEach(d => { const o = document.createElement('option'); o.value = d.rowKey || d; o.textContent = d.displayName || d; entryDogEl.appendChild(o); });
             cats.forEach(c => { const o = document.createElement('option'); o.value = c.rowKey || c; o.textContent = c.displayName || c; entryCategoryEl.appendChild(o); });
             entryDropdownsLoaded = true;
@@ -680,7 +680,7 @@
             const dogs = await dogsRes.json();
             const cats = await catsRes.json();
 
-            names.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; editNameEl.appendChild(o); });
+            names.forEach(n => { const o = document.createElement('option'); o.value = n.rowKey || n; o.textContent = n.displayName || n; editNameEl.appendChild(o); });
             dogs.forEach(d => { const o = document.createElement('option'); o.value = d.rowKey || d; o.textContent = d.displayName || d; editDogEl.appendChild(o); });
             cats.forEach(c => { const o = document.createElement('option'); o.value = c.rowKey || c; o.textContent = c.displayName || c; editCategoryEl.appendChild(o); });
             editDropdownsLoaded = true;

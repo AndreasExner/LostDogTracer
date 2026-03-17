@@ -26,6 +26,7 @@
     let toastTimeout = null;
     let selectedPhotoBlob = null;
     let resolvedDogName = '';
+    let resolvedDogRowKey = '';
     const charCounterEl = document.getElementById('charCounter');
 
     // ── Character counter ────────────────────────────────────────
@@ -95,6 +96,7 @@
             }
             const data = await res.json();
             resolvedDogName = data.displayName;
+            resolvedDogRowKey = data.rowKey;
             dogNameEl.textContent = resolvedDogName;
             return true;
         } catch (err) {
@@ -166,11 +168,10 @@
             const res = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
             if (!res.ok) throw new Error('Fehler beim Laden der Kategorien');
             const cats = await res.json();
-            const catNames = cats.map(c => c.name || c);
-            catNames.forEach(name => {
+            cats.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
+                opt.value = c.rowKey || c;
+                opt.textContent = c.displayName || c;
                 categoryEl.appendChild(opt);
             });
         } catch (err) {
@@ -196,7 +197,7 @@
     function onEditRecords() {
         const params = new URLSearchParams();
         params.set('name', 'HALTER*IN');
-        params.set('lostDog', resolvedDogName);
+        params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
         window.location.href = 'guest-records.html?' + params;
     }
@@ -204,7 +205,7 @@
     function onShowMap() {
         const params = new URLSearchParams();
         params.set('name', 'HALTER*IN');
-        params.set('lostDog', resolvedDogName);
+        params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
         window.location.href = 'guest-map.html?' + params;
     }
@@ -220,7 +221,7 @@
             const position = await getCurrentPosition();
             const entry = {
                 name: 'HALTER*IN',
-                lostDog: resolvedDogName,
+                lostDog: resolvedDogRowKey,
                 category: categoryEl.value,
                 comment: commentEl.value.trim(),
                 latitude: position.coords.latitude,

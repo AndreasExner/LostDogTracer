@@ -318,12 +318,12 @@ public class AdminAuth
         }
     }
 
-    /// <summary>Return display names of all users (for dropdown filters).</summary>
-    public async Task<List<string>> GetUserNamesAsync()
+    /// <summary>Return user objects with rowKey (username) and displayName for dropdowns.</summary>
+    public async Task<List<object>> GetUserNamesAsync()
     {
         await EnsureSeededAsync();
         var table = _tableService.GetTableClient(TableName);
-        var names = new List<string>();
+        var items = new List<(string rowKey, string displayName)>();
 
         await foreach (var entity in table.QueryAsync<TableEntity>(
             filter: $"PartitionKey eq '{Partition}'",
@@ -331,11 +331,11 @@ public class AdminAuth
         {
             var display = entity.GetString("DisplayName") ?? entity.RowKey;
             if (!string.IsNullOrWhiteSpace(display))
-                names.Add(display);
+                items.Add((entity.RowKey, display));
         }
 
-        names.Sort(StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false));
-        return names;
+        items.Sort((a, b) => StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false).Compare(a.displayName, b.displayName));
+        return items.Select(i => (object)new { rowKey = i.rowKey, displayName = i.displayName }).ToList();
     }
 
     /// <summary>Return a map of username → displayName for FK resolution.</summary>

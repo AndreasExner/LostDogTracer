@@ -31,7 +31,6 @@ jobs:
       - name: Inject API key
         run: |
           ESCAPED_KEY=$(printf '%s\n' "$DEPLOY_API_KEY" | sed 's/[&/\]/\\&/g')
-          sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/app.js
           sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/auth.js
           sed -i "s/%%PROD_API_KEY%%/${ESCAPED_KEY}/g" js/guest-app.js
 
@@ -41,7 +40,6 @@ jobs:
           SHORT_HASH=$(git rev-parse --short HEAD)
           BUILD_VERSION="v1.0.${COMMIT_COUNT}-${SHORT_HASH}"
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/nav.js
-          sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/main-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/guest-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/field-nav.js
 
