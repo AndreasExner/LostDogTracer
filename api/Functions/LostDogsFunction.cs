@@ -155,34 +155,77 @@ public class LostDogsFunction
                 return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
-            var displayName = body.GetProperty("location").GetString();
+            var name = body.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+            var location = body.TryGetProperty("location", out var locProp) ? locProp.GetString() : null;
 
-            if (string.IsNullOrWhiteSpace(displayName))
+            if (string.IsNullOrWhiteSpace(name))
                 return new BadRequestObjectResult(new { error = "Name darf nicht leer sein" });
 
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
-            var trimmed = displayName.Trim();
+            var trimmedName = name.Trim();
+            var trimmedLocation = location?.Trim() ?? "";
+            var displayName = string.IsNullOrEmpty(trimmedLocation) ? trimmedName : $"{trimmedName}, {trimmedLocation}";
 
             // Generate cryptographically random 6-char alphanumeric suffix
             var suffix = GenerateRandomSuffix(6);
-            var rowKey = $"{trimmed}_{suffix}";
+            var rowKey = $"{trimmedName}_{suffix}";
 
             var entity = new TableEntity("lostdogs", rowKey)
             {
-                { "DisplayName", trimmed },
+                { "DisplayName", displayName },
                 { "Suffix", suffix }
             };
 
             await tableClient.AddEntityAsync(entity);
-            _logger.LogInformation("Lost dog created: {DisplayName} ({Suffix})", trimmed, suffix);
+            _logger.LogInformation("Lost dog created: {DisplayName} ({Suffix})", displayName, suffix);
 
-            return new CreatedResult("", new { partitionKey = "lostdogs", rowKey, displayName = trimmed, suffix });
+            return new CreatedResult("", new { partitionKey = "lostdogs", rowKey, displayName, suffix });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating lost dog");
+            return new StatusCodeResult(500);
+        }
+    }
+
+    [Function("UpdateLostDog")]
+    public async Task<IActionResult> UpdateLostDog(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "manage/lost-dogs/{rowKey}")] HttpRequest req,
+        string rowKey)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
+                return AdminAuth.Forbidden();
+
+            var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
+            var displayName = body.TryGetProperty("displayName", out var dnProp) ? dnProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                return new BadRequestObjectResult(new { error = "Anzeigename darf nicht leer sein" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            var entity = await tableClient.GetEntityAsync<TableEntity>("lostdogs", rowKey);
+            entity.Value["DisplayName"] = displayName.Trim();
+            await tableClient.UpdateEntityAsync(entity.Value, entity.Value.ETag, TableUpdateMode.Replace);
+
+            _logger.LogInformation("Lost dog updated: RowKey={RowKey}", rowKey);
+            return new OkObjectResult(new { message = "Aktualisiert" });
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating lost dog");
             return new StatusCodeResult(500);
         }
     }

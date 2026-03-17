@@ -4,10 +4,16 @@
     const API_BASE = FT_AUTH.getApiBase();
 
     const listEl = document.getElementById('dogList');
-    const inputEl = document.getElementById('newDog');
     const addBtn = document.getElementById('addBtn');
     const toastEl = document.getElementById('toast');
+    const createModal = document.getElementById('createDogModal');
+    const editModal = document.getElementById('editDogModal');
     let toastTimeout = null;
+
+    function openModal(m) { m.classList.add('open'); }
+    function closeModal(m) { m.classList.remove('open'); }
+    function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+    function hideError(id) { const el = document.getElementById(id); el.textContent = ''; el.style.display = 'none'; }
 
     async function loadDogs() {
         listEl.innerHTML = '<li style="color:#6e6e73">Lädt…</li>';
@@ -35,6 +41,13 @@
                 : esc(item.displayName);
             li.innerHTML = `<span class="item-name">${display}</span>`;
 
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary btn-sm';
+            editBtn.style.marginRight = '0.5rem';
+            editBtn.textContent = 'Bearbeiten';
+            editBtn.addEventListener('click', () => openEditDog(item.rowKey, item.displayName));
+            li.appendChild(editBtn);
+
             if (item.suffix) {
                 const linkBtn = document.createElement('button');
                 linkBtn.className = 'btn btn-secondary btn-sm';
@@ -44,46 +57,86 @@
                 li.appendChild(linkBtn);
             }
 
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-danger btn-sm';
-            btn.textContent = 'Löschen';
-            btn.addEventListener('click', () => deleteDog(item.rowKey, item.displayName));
-            li.appendChild(btn);
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-sm';
+            delBtn.textContent = 'Löschen';
+            delBtn.addEventListener('click', () => deleteDog(item.rowKey, item.displayName));
+            li.appendChild(delBtn);
             listEl.appendChild(li);
         });
     }
 
-    async function addDog() {
-        const location = inputEl.value.trim();
-        if (!location) {
-            inputEl.style.borderColor = '#ff3b30';
-            inputEl.style.boxShadow = '0 0 0 3px rgba(255,59,48,.12)';
-            inputEl.focus();
-            setTimeout(() => { inputEl.style.borderColor = ''; inputEl.style.boxShadow = ''; }, 2000);
-            return;
-        }
-        addBtn.disabled = true;
+    /* ── Create dog ───────────────────────────── */
+    addBtn.addEventListener('click', () => {
+        document.getElementById('newDogName').value = '';
+        document.getElementById('newDogLocation').value = '';
+        hideError('createDogError');
+        openModal(createModal);
+    });
+    document.getElementById('createDogCancel').addEventListener('click', () => closeModal(createModal));
+    document.getElementById('createDogSave').addEventListener('click', async () => {
+        const name = document.getElementById('newDogName').value.trim();
+        const location = document.getElementById('newDogLocation').value.trim();
+        if (!name) { showError('createDogError', 'Name ist ein Pflichtfeld.'); return; }
+
+        const btn = document.getElementById('createDogSave');
+        btn.disabled = true;
         try {
             const res = await fetch(`${API_BASE}/manage/lost-dogs`, {
                 method: 'POST',
                 headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ location })
+                body: JSON.stringify({ name, location })
             });
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
-            inputEl.value = '';
-            showToast(`\u201E${location}\u201C hinzugefügt`);
+            closeModal(createModal);
+            const displayName = location ? `${name}, ${location}` : name;
+            showToast(`\u201E${displayName}\u201C hinzugefügt`);
             await loadDogs();
         } catch {
-            showToast('Fehler beim Hinzufügen', true);
+            showError('createDogError', 'Fehler beim Anlegen.');
         } finally {
-            addBtn.disabled = false;
-            inputEl.focus();
+            btn.disabled = false;
         }
-    }
+    });
 
-    async function deleteDog(rowKey, location) {
-        if (!confirm(`\u201E${location}\u201C wirklich löschen?`)) return;
+    /* ── Edit dog ─────────────────────────────── */
+    let editTarget = '';
+    function openEditDog(rowKey, displayName) {
+        editTarget = rowKey;
+        document.getElementById('editDogTitle').textContent = rowKey;
+        document.getElementById('editDogDisplayName').value = displayName;
+        hideError('editDogError');
+        openModal(editModal);
+    }
+    document.getElementById('editDogCancel').addEventListener('click', () => closeModal(editModal));
+    document.getElementById('editDogSave').addEventListener('click', async () => {
+        const displayName = document.getElementById('editDogDisplayName').value.trim();
+        if (!displayName) { showError('editDogError', 'Anzeigename darf nicht leer sein.'); return; }
+
+        const btn = document.getElementById('editDogSave');
+        btn.disabled = true;
+        try {
+            const res = await fetch(`${API_BASE}/manage/lost-dogs/${encodeURIComponent(editTarget)}`, {
+                method: 'PUT',
+                headers: FT_AUTH.adminHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ displayName })
+            });
+            if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+            if (!res.ok) throw new Error();
+            closeModal(editModal);
+            showToast('Anzeigename aktualisiert');
+            await loadDogs();
+        } catch {
+            showError('editDogError', 'Fehler beim Speichern.');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    /* ── Delete dog ───────────────────────────── */
+    async function deleteDog(rowKey, displayName) {
+        if (!confirm(`\u201E${displayName}\u201C wirklich löschen?`)) return;
         try {
             const res = await fetch(`${API_BASE}/manage/lost-dogs/${encodeURIComponent(rowKey)}`, {
                 method: 'DELETE',
@@ -91,21 +144,18 @@
             });
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
-            showToast(`\u201E${location}\u201C gelöscht`);
+            showToast(`\u201E${displayName}\u201C gelöscht`);
             await loadDogs();
         } catch {
             showToast('Fehler beim Löschen', true);
         }
     }
 
-    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addDog(); });
-    addBtn.addEventListener('click', addDog);
-
-    async function copyGuestLink(suffix, location) {
+    async function copyGuestLink(suffix, displayName) {
         const url = `${window.location.origin}/guest-home.html?key=${encodeURIComponent(suffix)}`;
         try {
             await navigator.clipboard.writeText(url);
-            showToast(`Link für \u201E${location}\u201C kopiert`);
+            showToast(`Link für \u201E${displayName}\u201C kopiert`);
         } catch {
             prompt('Link kopieren:', url);
         }
