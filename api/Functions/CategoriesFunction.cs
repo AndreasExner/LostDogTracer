@@ -45,7 +45,7 @@ public class CategoriesFunction
             var categories = new List<(string rowKey, string name, string svgSymbol)>();
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var name = entity.GetString("DisplayName") ?? entity.RowKey;
+                var name = entity.GetString("DisplayName") ?? entity.GetString("Name") ?? entity.RowKey;
                 if (!string.IsNullOrWhiteSpace(name))
                     categories.Add((entity.RowKey, name, entity.GetString("SvgSymbol") ?? ""));
             }
@@ -85,7 +85,7 @@ public class CategoriesFunction
                 items.Add((
                     entity.PartitionKey,
                     entity.RowKey,
-                    entity.GetString("DisplayName") ?? entity.RowKey,
+                    entity.GetString("DisplayName") ?? entity.GetString("Name") ?? entity.RowKey,
                     entity.GetString("SvgSymbol") ?? ""
                 ));
             }
@@ -303,7 +303,7 @@ public class CategoriesFunction
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var name = entity.GetString("DisplayName") ?? "";
+                var name = entity.GetString("DisplayName") ?? entity.GetString("Name") ?? "";
                 var existing = entity.GetString("SvgSymbol") ?? "";
                 if (string.IsNullOrWhiteSpace(existing) && defaults.TryGetValue(name, out var svg))
                 {

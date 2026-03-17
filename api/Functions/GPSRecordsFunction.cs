@@ -48,14 +48,14 @@ public class GPSRecordsFunction
             var dogLookup = new Dictionary<string, string>();
             var dogTable = _tableService.GetTableClient("LostDogs");
             await dogTable.CreateIfNotExistsAsync();
-            await foreach (var e in dogTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName" }))
-                dogLookup[e.RowKey] = e.GetString("DisplayName") ?? e.RowKey;
+            await foreach (var e in dogTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName", "Location" }))
+                dogLookup[e.RowKey] = e.GetString("DisplayName") ?? e.GetString("Location") ?? e.RowKey;
 
             var catLookup = new Dictionary<string, string>();
             var catTable = _tableService.GetTableClient("Categories");
             await catTable.CreateIfNotExistsAsync();
-            await foreach (var e in catTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName" }))
-                catLookup[e.RowKey] = e.GetString("DisplayName") ?? e.RowKey;
+            await foreach (var e in catTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName", "Name" }))
+                catLookup[e.RowKey] = e.GetString("DisplayName") ?? e.GetString("Name") ?? e.RowKey;
 
             var userLookup = await _adminAuth.GetUserDisplayNameMapAsync();
 
@@ -242,14 +242,14 @@ public class GPSRecordsFunction
             var dogLookup = new Dictionary<string, string>();
             var dogTable = _tableService.GetTableClient("LostDogs");
             await dogTable.CreateIfNotExistsAsync();
-            await foreach (var e in dogTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName" }))
-                dogLookup[e.RowKey] = e.GetString("DisplayName") ?? e.RowKey;
+            await foreach (var e in dogTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName", "Location" }))
+                dogLookup[e.RowKey] = e.GetString("DisplayName") ?? e.GetString("Location") ?? e.RowKey;
 
             var catLookup = new Dictionary<string, string>();
             var catTable = _tableService.GetTableClient("Categories");
             await catTable.CreateIfNotExistsAsync();
-            await foreach (var e in catTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName" }))
-                catLookup[e.RowKey] = e.GetString("DisplayName") ?? e.RowKey;
+            await foreach (var e in catTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName", "Name" }))
+                catLookup[e.RowKey] = e.GetString("DisplayName") ?? e.GetString("Name") ?? e.RowKey;
 
             var tableClient = _tableService.GetTableClient("GPSRecords");
             await tableClient.CreateIfNotExistsAsync();

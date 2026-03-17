@@ -45,7 +45,7 @@ public class LostDogsFunction
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var displayName = entity.GetString("DisplayName") ?? entity.RowKey;
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
                 var suffix = entity.GetString("Suffix") ?? "";
                 if (!string.IsNullOrWhiteSpace(displayName))
                 {
@@ -88,7 +88,7 @@ public class LostDogsFunction
             var filter = $"Suffix eq '{key.Replace("'", "''")}'";
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(filter))
             {
-                var displayName = entity.GetString("DisplayName") ?? entity.RowKey;
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
                 return new OkObjectResult(new { displayName, rowKey = entity.RowKey });
             }
 
@@ -123,7 +123,7 @@ public class LostDogsFunction
                 items.Add((
                     entity.PartitionKey,
                     entity.RowKey,
-                    entity.GetString("DisplayName") ?? entity.RowKey,
+                    entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey,
                     entity.GetString("Suffix") ?? ""
                 ));
             }
