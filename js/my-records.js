@@ -25,12 +25,32 @@
     if (!filterName || !filterDog) {
         filterInfoEl.textContent = '⚠️ Kein Name/Hund ausgewählt';
         bodyEl.innerHTML = '<tr><td colspan="5" style="color:#ff3b30;text-align:center;padding:2rem">Bitte zuerst Name und Hund auf der Startseite auswählen.</td></tr>';
-        // Disable interactions
         sortFieldEl.disabled = true;
         pageSizeEl.disabled = true;
     } else {
-        filterInfoEl.textContent = `${filterName} / ${filterDog}`;
+        resolveFilterInfo();
         init();
+    }
+
+    async function resolveFilterInfo() {
+        let nameDisplay = filterName;
+        let dogDisplay = filterDog;
+        try {
+            const [verifyRes, dogsRes] = await Promise.all([
+                fetch(`${API_BASE}/auth/verify`, { headers: FT_AUTH.adminHeaders() }),
+                fetch(`${API_BASE}/lost-dogs`, { headers: FT_AUTH.publicHeaders() })
+            ]);
+            if (verifyRes.ok) {
+                const v = await verifyRes.json();
+                if (v.displayName) nameDisplay = v.displayName;
+            }
+            if (dogsRes.ok) {
+                const dogs = await dogsRes.json();
+                const match = dogs.find(d => d.rowKey === filterDog);
+                if (match) dogDisplay = match.displayName;
+            }
+        } catch { /* use raw keys as fallback */ }
+        filterInfoEl.textContent = `${nameDisplay} / ${dogDisplay}`;
     }
 
     function init() {

@@ -169,7 +169,7 @@ public class LostDogsFunction
             var suffix = GenerateRandomSuffix(6);
             var rowKey = $"{trimmed}_{suffix}";
 
-            var entity = new TableEntity("locations", rowKey)
+            var entity = new TableEntity("lostdogs", rowKey)
             {
                 { "DisplayName", trimmed },
                 { "Suffix", suffix }
@@ -178,7 +178,7 @@ public class LostDogsFunction
             await tableClient.AddEntityAsync(entity);
             _logger.LogInformation("Lost dog created: {DisplayName} ({Suffix})", trimmed, suffix);
 
-            return new CreatedResult("", new { partitionKey = "locations", rowKey, displayName = trimmed, suffix });
+            return new CreatedResult("", new { partitionKey = "lostdogs", rowKey, displayName = trimmed, suffix });
         }
         catch (Exception ex)
         {
@@ -202,7 +202,7 @@ public class LostDogsFunction
             if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
                 return AdminAuth.Forbidden();
             var tableClient = _tableService.GetTableClient("LostDogs");
-            await tableClient.DeleteEntityAsync("locations", rowKey);
+            await tableClient.DeleteEntityAsync("lostdogs", rowKey);
             _logger.LogInformation("Lost dog deleted: RowKey={RowKey}", rowKey);
             return new OkObjectResult(new { message = "Gelöscht" });
         }

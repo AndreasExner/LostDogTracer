@@ -69,7 +69,13 @@ public class AuthFunction
 
         var username = _auth.GetUsernameFromToken(req);
         var role = username != null ? await _auth.GetUserRoleAsync(username) ?? "User" : "User";
-        return new OkObjectResult(new { valid = true, username, role });
+        string? displayName = null;
+        if (username != null)
+        {
+            var map = await _auth.GetUserDisplayNameMapAsync();
+            displayName = map.GetValueOrDefault(username, username);
+        }
+        return new OkObjectResult(new { valid = true, username, role, displayName = displayName ?? username });
     }
 
     [Function("ChangePassword")]

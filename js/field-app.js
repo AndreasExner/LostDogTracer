@@ -98,7 +98,7 @@
             const res = await fetch(`${API_BASE}/auth/verify`, { headers: FT_AUTH.adminHeaders() });
             if (res.ok) {
                 const data = await res.json();
-                const display = data.username || '';
+                const display = data.displayName || data.username || '';
                 userNameEl.value = display;
                 if (typeof FT_OFFLINE !== 'undefined') FT_OFFLINE.saveDropdownData('field_currentUser', display);
             } else {

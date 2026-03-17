@@ -42,17 +42,17 @@ public class CategoriesFunction
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
 
-            var categories = new List<(string name, string svgSymbol)>();
+            var categories = new List<(string rowKey, string name, string svgSymbol)>();
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
                 var name = entity.GetString("DisplayName") ?? entity.RowKey;
                 if (!string.IsNullOrWhiteSpace(name))
-                    categories.Add((name, entity.GetString("SvgSymbol") ?? ""));
+                    categories.Add((entity.RowKey, name, entity.GetString("SvgSymbol") ?? ""));
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             categories.Sort((a, b) => comparer.Compare(a.name, b.name));
-            return new OkObjectResult(categories.Select(c => new { displayName = c.name, c.svgSymbol }));
+            return new OkObjectResult(categories.Select(c => new { rowKey = c.rowKey, displayName = c.name, c.svgSymbol }));
         }
         catch (Exception ex)
         {

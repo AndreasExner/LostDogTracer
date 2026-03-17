@@ -20,11 +20,30 @@
         filterInfoEl.textContent = '⚠️ Kein Name/Hund ausgewählt';
         markerCountEl.textContent = '—';
         document.getElementById('map').innerHTML = '<p style="padding:2rem;text-align:center;color:#ff3b30">Bitte zuerst Name und Hund auf der Startseite auswählen.</p>';
-        // Don't init map
         return;
     }
 
-    filterInfoEl.textContent = `${filterName} / ${filterDog}`;
+    // Resolve display names for header
+    (async function resolveFilterInfo() {
+        let nameDisplay = filterName;
+        let dogDisplay = filterDog;
+        try {
+            const [verifyRes, dogsRes] = await Promise.all([
+                fetch(`${API_BASE}/auth/verify`, { headers: FT_AUTH.adminHeaders() }),
+                fetch(`${API_BASE}/lost-dogs`, { headers: FT_AUTH.publicHeaders() })
+            ]);
+            if (verifyRes.ok) {
+                const v = await verifyRes.json();
+                if (v.displayName) nameDisplay = v.displayName;
+            }
+            if (dogsRes.ok) {
+                const dogs = await dogsRes.json();
+                const match = dogs.find(d => d.rowKey === filterDog);
+                if (match) dogDisplay = match.displayName;
+            }
+        } catch {}
+        filterInfoEl.textContent = `${nameDisplay} / ${dogDisplay}`;
+    })();
 
     // ── Color palette ────────────────────────────────────────────
     const COLORS = [
