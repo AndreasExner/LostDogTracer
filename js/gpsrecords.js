@@ -656,6 +656,7 @@
     const editDogEl = document.getElementById('editDog');
     const editCategoryEl = document.getElementById('editCategory');
     const editCommentEl = document.getElementById('editComment');
+    const editRecordedAtEl = document.getElementById('editRecordedAt');
     const editDeletePhotoEl = document.getElementById('editDeletePhoto');
     const editPhotoRow = document.getElementById('editPhotoRow');
     const editSaveBtn = document.getElementById('editSaveBtn');
@@ -700,6 +701,7 @@
         editDogEl.value = '';
         editCategoryEl.value = '';
         editCommentEl.value = '';
+        editRecordedAtEl.value = '';
         editDeletePhotoEl.checked = false;
         editLatitudeEl.value = '';
         editLongitudeEl.value = '';
@@ -711,28 +713,38 @@
         editPhotoRow.style.display = hasPhoto ? '' : 'none';
 
         if (sel.length === 1) {
-            // Show coordinates for single edit
+            // Show coordinates + timestamp for single edit
             editLatitudeEl.parentElement.style.display = '';
             editLongitudeEl.parentElement.style.display = '';
             editAccuracyEl.parentElement.style.display = '';
+            editRecordedAtEl.parentElement.style.display = '';
             // Pre-fill with current values for single record
             const rec = data.records.find(r => r.partitionKey === sel[0].partitionKey && r.rowKey === sel[0].rowKey);
             if (rec) {
-                editNameEl.value = rec.name || '';
-                editDogEl.value = rec.lostDog || '';
-                editCategoryEl.value = rec.category || '';
+                editNameEl.value = rec.nameKey || rec.name || '';
+                editDogEl.value = rec.lostDogKey || rec.lostDog || '';
+                editCategoryEl.value = rec.categoryKey || rec.category || '';
                 editCommentEl.value = rec.comment || '';
                 editLatitudeEl.value = rec.latitude.toFixed(6);
                 editLongitudeEl.value = rec.longitude.toFixed(6);
                 editAccuracyEl.value = rec.accuracy.toFixed(1) + ' m';
+                // Pre-fill timestamp as local datetime
+                if (rec.recordedAt) {
+                    try {
+                        const d = new Date(rec.recordedAt);
+                        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                        editRecordedAtEl.value = d.toISOString().slice(0, 16);
+                    } catch { editRecordedAtEl.value = ''; }
+                }
             }
             editModalTitle.textContent = 'Eintrag bearbeiten';
         } else {
             editModalTitle.textContent = `${sel.length} Einträge bearbeiten`;
-            // Hide coordinates for bulk edit
+            // Hide coordinates + timestamp for bulk edit
             editLatitudeEl.parentElement.style.display = 'none';
             editLongitudeEl.parentElement.style.display = 'none';
             editAccuracyEl.parentElement.style.display = 'none';
+            editRecordedAtEl.parentElement.style.display = 'none';
         }
 
         editModal.classList.remove('hidden');
@@ -761,6 +773,9 @@
             payload.lostDog = editDogEl.value || undefined;
             payload.category = editCategoryEl.value; // allow empty to clear
             payload.comment = editCommentEl.value;     // allow empty to clear
+            if (editRecordedAtEl.value) {
+                payload.recordedAt = new Date(editRecordedAtEl.value).toISOString();
+            }
         } else {
             if (editNameEl.value) payload.name = editNameEl.value;
             if (editDogEl.value) payload.lostDog = editDogEl.value;
