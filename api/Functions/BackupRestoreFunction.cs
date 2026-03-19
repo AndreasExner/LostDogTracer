@@ -16,7 +16,7 @@ public class BackupRestoreFunction
     private readonly AdminAuth _adminAuth;
     private readonly RateLimitProvider _rateLimit;
 
-    private static readonly string[] BackupTables = { "GPSRecords", "Users", "LostDogs", "Categories" };
+    private static readonly string[] BackupTables = { "GPSRecords", "Users", "LostDogs", "Categories", "Config" };
 
     public BackupRestoreFunction(TableServiceClient tableService,
         ILogger<BackupRestoreFunction> logger, ApiKeyValidator apiKey,

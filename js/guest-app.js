@@ -50,10 +50,6 @@
         restoreCategory();
         updateButtonState();
 
-        categoryEl.addEventListener('change', () => {
-            localStorage.setItem(STORAGE_KEY_CATEGORY, categoryEl.value);
-            updateButtonState();
-        });
         saveBtnEl.addEventListener('click', onSaveLocation);
         commentEl.addEventListener('input', updateCharCounter);
 
@@ -161,30 +157,33 @@
         });
     }
 
-    // ── Load categories ──────────────────────────────────────────
-    async function loadCategories() {
-        try {
-            categoryEl.classList.add('loading');
-            const res = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
-            if (!res.ok) throw new Error('Fehler beim Laden der Kategorien');
-            const cats = await res.json();
-            cats.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.rowKey || c;
-                opt.textContent = c.displayName || c;
-                categoryEl.appendChild(opt);
-            });
-        } catch (err) {
-            console.error(err);
-            showToast('Kategorien konnten nicht geladen werden', true);
-        } finally {
-            categoryEl.classList.remove('loading');
-        }
-    }
+    // ── Load guest category from config ────────────────────────────
+    const categoryDisplayEl = document.getElementById('categoryDisplay');
 
-    function restoreCategory() {
-        const saved = localStorage.getItem(STORAGE_KEY_CATEGORY);
-        if (saved) categoryEl.value = saved;
+    async function loadGuestCategory() {
+        try {
+            // Wait for config from theme.js or fetch directly
+            let cfg = window.FT_CONFIG;
+            if (!cfg) {
+                const res = await fetch(`${API_BASE}/config`, { headers: { 'X-API-Key': API_KEY } });
+                if (res.ok) cfg = await res.json();
+            }
+            const catRowKey = cfg?.guestCategoryRowKey || '';
+            if (!catRowKey) return;
+
+            categoryEl.value = catRowKey;
+
+            // Resolve displayName from categories API
+            const catRes = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
+            if (catRes.ok) {
+                const cats = await catRes.json();
+                const match = cats.find(c => c.rowKey === catRowKey);
+                if (match) categoryDisplayEl.textContent = match.displayName;
+                else categoryDisplayEl.textContent = catRowKey;
+            }
+        } catch {
+            categoryDisplayEl.textContent = '(Fehler)';
+        }
     }
 
     function updateButtonState() {

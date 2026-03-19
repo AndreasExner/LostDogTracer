@@ -51,4 +51,33 @@
 
     // Apply immediately
     applySavedTheme();
+
+    // ── Site Banner from Config ──────────────────────────────────
+    (async function loadSiteBanner() {
+        try {
+            const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
+            const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';
+            const cached = sessionStorage.getItem('lostdogtracer_config');
+            if (cached) {
+                const cfg = JSON.parse(cached);
+                applyBanner(cfg.siteBanner);
+                window.FT_CONFIG = cfg;
+                return;
+            }
+            const res = await fetch(`${API_BASE}/config`, { headers: { 'X-API-Key': API_KEY } });
+            if (res.ok) {
+                const cfg = await res.json();
+                sessionStorage.setItem('lostdogtracer_config', JSON.stringify(cfg));
+                applyBanner(cfg.siteBanner);
+                window.FT_CONFIG = cfg;
+            }
+        } catch { /* use hardcoded fallback */ }
+    })();
+
+    function applyBanner(text) {
+        if (!text) return;
+        const el = document.querySelector('.site-banner');
+        if (el) el.textContent = text;
+    }
 })();
