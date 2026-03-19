@@ -46,8 +46,7 @@
             return;
         }
 
-        await loadCategories();
-        restoreCategory();
+        await loadGuestCategory();
         updateButtonState();
 
         saveBtnEl.addEventListener('click', onSaveLocation);
