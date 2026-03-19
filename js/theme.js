@@ -62,6 +62,7 @@
             if (cached) {
                 const cfg = JSON.parse(cached);
                 applyBanner(cfg.siteBanner);
+                applyFooterLinks(cfg);
                 window.FT_CONFIG = cfg;
                 return;
             }
@@ -70,6 +71,7 @@
                 const cfg = await res.json();
                 sessionStorage.setItem('lostdogtracer_config', JSON.stringify(cfg));
                 applyBanner(cfg.siteBanner);
+                applyFooterLinks(cfg);
                 window.FT_CONFIG = cfg;
             }
         } catch { /* use hardcoded fallback */ }
@@ -79,5 +81,14 @@
         if (!text) return;
         const el = document.querySelector('.site-banner');
         if (el) el.textContent = text;
+    }
+
+    function applyFooterLinks(cfg) {
+        const footer = document.querySelector('.legal-footer');
+        if (!footer) return;
+        const links = [];
+        if (cfg.privacyUrl) links.push(`<a href="${cfg.privacyUrl}" target="_blank" rel="noopener">Datenschutz</a>`);
+        if (cfg.imprintUrl) links.push(`<a href="${cfg.imprintUrl}" target="_blank" rel="noopener">Impressum</a>`);
+        if (links.length) footer.innerHTML = links.join(' · ');
     }
 })();

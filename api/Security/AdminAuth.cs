@@ -43,7 +43,7 @@ public class AdminAuth
     {
         _tableService = tableService;
         _tokenSecret = Encoding.UTF8.GetBytes(tokenSecret);
-        _tokenLifetime = tokenLifetime ?? TimeSpan.FromHours(8);
+        _tokenLifetime = tokenLifetime ?? TimeSpan.FromHours(24);
         _seedUsername = seedUsername;
         _seedPassword = seedPassword;
     }

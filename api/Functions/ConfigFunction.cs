@@ -45,7 +45,9 @@ public class ConfigFunction
             return new OkObjectResult(new
             {
                 siteBanner = entity.GetString("SiteBanner") ?? "LostDogTracer",
-                guestCategoryRowKey = entity.GetString("GuestCategoryRowKey") ?? ""
+                guestCategoryRowKey = entity.GetString("GuestCategoryRowKey") ?? "",
+                privacyUrl = entity.GetString("PrivacyUrl") ?? "",
+                imprintUrl = entity.GetString("ImprintUrl") ?? ""
             });
         }
         catch (Exception ex)
@@ -79,6 +81,10 @@ public class ConfigFunction
                 entity["SiteBanner"] = bannerProp.GetString()?.Trim() ?? "";
             if (body.TryGetProperty("guestCategoryRowKey", out var catProp))
                 entity["GuestCategoryRowKey"] = catProp.GetString()?.Trim() ?? "";
+            if (body.TryGetProperty("privacyUrl", out var privProp))
+                entity["PrivacyUrl"] = privProp.GetString()?.Trim() ?? "";
+            if (body.TryGetProperty("imprintUrl", out var impProp))
+                entity["ImprintUrl"] = impProp.GetString()?.Trim() ?? "";
 
             await table.UpsertEntityAsync(entity, TableUpdateMode.Replace);
             _logger.LogInformation("Config updated");
@@ -107,8 +113,10 @@ public class ConfigFunction
             // Seed defaults
             var entity = new TableEntity(PK, RK)
             {
-                { "SiteBanner", "Hundesuchhilfe-Ostfriesland e.V." },
-                { "GuestCategoryRowKey", "001772623834586" }
+                { "SiteBanner", "Mein Org Name hier" },
+                { "GuestCategoryRowKey", "001772623834586" },
+                { "PrivacyUrl", "https://mein-impressum-hier.org" },
+                { "ImprintUrl", "https://mein-impressum-hier.org" }
             };
             await table.AddEntityAsync(entity);
             return entity;
