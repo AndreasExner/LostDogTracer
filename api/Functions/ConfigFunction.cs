@@ -98,6 +98,14 @@ public class ConfigFunction
         }
     }
 
+    private static readonly Dictionary<string, string> DefaultValues = new()
+    {
+        ["SiteBanner"] = "Mein Org Name hier",
+        ["GuestCategoryRowKey"] = "001772623834586",
+        ["PrivacyUrl"] = "https://mein-impressum-hier.org",
+        ["ImprintUrl"] = "https://mein-impressum-hier.org"
+    };
+
     private async Task<TableEntity> GetOrSeedConfigAsync()
     {
         var table = _tableService.GetTableClient(TableName);
@@ -106,18 +114,28 @@ public class ConfigFunction
         try
         {
             var response = await table.GetEntityAsync<TableEntity>(PK, RK);
-            return response.Value;
+            var entity = response.Value;
+
+            // Backfill missing fields with defaults
+            bool updated = false;
+            foreach (var (key, defaultVal) in DefaultValues)
+            {
+                if (!entity.ContainsKey(key) || string.IsNullOrEmpty(entity.GetString(key)))
+                {
+                    entity[key] = defaultVal;
+                    updated = true;
+                }
+            }
+            if (updated)
+                await table.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Merge);
+
+            return entity;
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
         {
-            // Seed defaults
-            var entity = new TableEntity(PK, RK)
-            {
-                { "SiteBanner", "Mein Org Name hier" },
-                { "GuestCategoryRowKey", "001772623834586" },
-                { "PrivacyUrl", "https://mein-impressum-hier.org" },
-                { "ImprintUrl", "https://mein-impressum-hier.org" }
-            };
+            var entity = new TableEntity(PK, RK);
+            foreach (var (key, val) in DefaultValues)
+                entity[key] = val;
             await table.AddEntityAsync(entity);
             return entity;
         }
