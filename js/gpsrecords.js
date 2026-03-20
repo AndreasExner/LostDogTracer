@@ -27,10 +27,10 @@
         return [...catDropdownEl.querySelectorAll('input:checked')].map(cb => cb.value);
     }
     function updateCatBtnText() {
-        const sel = getSelectedCategories();
-        if (sel.length === 0) catBtnEl.textContent = 'Alle Kategorien';
-        else if (sel.length === 1) catBtnEl.textContent = sel[0];
-        else catBtnEl.textContent = sel.length + ' Kategorien';
+        const checked = [...catDropdownEl.querySelectorAll('input:checked')];
+        if (checked.length === 0) catBtnEl.textContent = 'Alle Kategorien';
+        else if (checked.length === 1) catBtnEl.textContent = checked[0].parentElement.textContent.trim();
+        else catBtnEl.textContent = checked.length + ' Kategorien';
     }
     catBtnEl.addEventListener('click', e => { e.stopPropagation(); catDropdownEl.classList.toggle('hidden'); });
     document.addEventListener('click', e => { if (!catWrapEl.contains(e.target)) catDropdownEl.classList.add('hidden'); });

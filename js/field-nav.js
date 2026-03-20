@@ -14,7 +14,7 @@
     drawer.className = 'nav-drawer';
 
     const pages = [
-        { href: 'field-home.html', icon: '📍', label: 'Erfassen' },
+        { href: 'field-home.html', icon: '�', label: 'Erfassen' },
         { href: 'field-records.html', icon: '📝', label: 'Einträge', needsParams: true },
         { href: 'field-map.html', icon: '🗺️', label: 'Karte', needsParams: true },
     ];
