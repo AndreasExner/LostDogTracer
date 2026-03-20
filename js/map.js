@@ -20,10 +20,10 @@
         return [...catDropdownEl.querySelectorAll('input:checked')].map(cb => cb.value);
     }
     function updateCatBtnText() {
-        const sel = getSelectedCategories();
-        if (sel.length === 0) catBtnEl.textContent = 'Alle Kategorien';
-        else if (sel.length === 1) catBtnEl.textContent = sel[0];
-        else catBtnEl.textContent = sel.length + ' Kategorien';
+        const checked = [...catDropdownEl.querySelectorAll('input:checked')];
+        if (checked.length === 0) catBtnEl.textContent = 'Alle Kategorien';
+        else if (checked.length === 1) catBtnEl.textContent = checked[0].parentElement.textContent.trim();
+        else catBtnEl.textContent = checked.length + ' Kategorien';
     }
     catBtnEl.addEventListener('click', e => { e.stopPropagation(); catDropdownEl.classList.toggle('hidden'); });
     document.addEventListener('click', e => { if (!catWrapEl.contains(e.target)) catDropdownEl.classList.add('hidden'); });
@@ -218,31 +218,33 @@
             });
             filterNameEl.value = currentNameVal;
 
-            // Populate category filter dropdown (only on first load)
+            // Populate category filter dropdown (only on first load — load ALL categories, not just filtered ones)
             if (!catDropdownBuilt) {
-                const currentCats = data.categories || [];
-                const currentCatSel = getSelectedCategories();
-                catDropdownEl.innerHTML = '';
-                currentCats.forEach(c => {
-                    const key = c.rowKey || c;
-                    const display = c.displayName || c;
-                    const label = document.createElement('label');
-                    label.className = 'multi-select-item';
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox';
-                    cb.value = key;
-                    if (currentCatSel.length > 0) {
-                        if (currentCatSel.includes(key)) cb.checked = true;
-                    } else if (filterCategory && filterCategory.split(',').includes(key)) {
-                        cb.checked = true;
+                try {
+                    const allCatsRes = await fetch(`${API_BASE}/categories`, { headers: FT_AUTH.publicHeaders() });
+                    if (allCatsRes.ok) {
+                        const allCats = await allCatsRes.json();
+                        catDropdownEl.innerHTML = '';
+                        allCats.forEach(c => {
+                            const key = c.rowKey || c;
+                            const display = c.displayName || c;
+                            const label = document.createElement('label');
+                            label.className = 'multi-select-item';
+                            const cb = document.createElement('input');
+                            cb.type = 'checkbox';
+                            cb.value = key;
+                            if (filterCategory && filterCategory.split(',').includes(key)) {
+                                cb.checked = true;
+                            }
+                            cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
+                            label.appendChild(cb);
+                            label.appendChild(document.createTextNode(' ' + display));
+                            catDropdownEl.appendChild(label);
+                        });
+                        updateCatBtnText();
+                        catDropdownBuilt = true;
                     }
-                    cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
-                    label.appendChild(cb);
-                    label.appendChild(document.createTextNode(' ' + display));
-                    catDropdownEl.appendChild(label);
-                });
-                updateCatBtnText();
-                catDropdownBuilt = true;
+                } catch { /* use data.categories as fallback */ }
             }
 
             if (records.length === 0) {
