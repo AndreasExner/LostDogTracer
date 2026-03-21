@@ -14,7 +14,7 @@
     <div class="admin-container">
         <div class="admin-header">
             <h1>GPS-Daten</h1>
-            <a href="admin.html" class="btn-back">Zurück</a>
+            <a href="index.html" class="btn-back">Zurück</a>
         </div>
 
         <!-- Toolbar: filter, sort, page-size, actions -->
@@ -81,8 +81,8 @@
         </div>
 
         <!-- Address entry panel -->
-        <details id="addressPanel" class="address-panel">
-            <summary>📍 Neuer Eintrag (Adresse)</summary>
+        <details id="addressPanel" class="address-panel" style="border:2px solid #34c759;border-radius:12px;padding:1rem;background:#f0fff4;">
+            <summary style="color:#1a7f37;font-weight:600;cursor:pointer;">📍 Neuer Eintrag (Adresse)</summary>
             <div class="address-form">
                 <div class="address-search-row">
                     <input type="text" id="addressInput" placeholder="Straße, Ort eingeben…" autocomplete="off">
@@ -132,6 +132,9 @@
                     <label>Kommentar
                         <input type="text" id="editComment" placeholder="Kommentar (max. 40 Zeichen)" maxlength="40">
                     </label>
+                    <label>Zeitpunkt
+                        <input type="datetime-local" id="editRecordedAt">
+                    </label>
                     <label>Breitengrad
                         <input type="text" id="editLatitude" readonly style="background:var(--bg-primary);color:var(--text-secondary)">
                     </label>
@@ -159,11 +162,11 @@
     </div>
     <script src="js/auth.js"></script>
     <script>
-        FT_AUTH.isLoggedIn().then(ok => { if (!ok) location.href = 'admin.html'; });
+        FT_AUTH.requireRole(2);
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/admin-gpsrecords.js"></script>
+    <script src="js/gpsrecords.js"></script>
     <script src="js/theme.js"></script>
-    <script src="js/admin-nav.js"></script>
+    <script src="js/nav.js"></script>
 </body>
 </html>

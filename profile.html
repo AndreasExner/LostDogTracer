@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Mein Profil</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .profile-card {
+            background: #fff; border: 1px solid #e8e8ed; border-radius: 10px;
+            padding: 1.25rem; margin-bottom: 1rem;
+        }
+        .profile-card label { display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.875rem; color: #6e6e73; }
+        .profile-card input {
+            width: 100%; padding: 0.75rem 1rem; font-size: 1rem;
+            border: 1px solid #d2d2d7; border-radius: 10px; outline: none; margin-bottom: 0.75rem;
+        }
+        .profile-card input:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); }
+        .section-title { font-size: 1rem; font-weight: 600; color: #6e6e73; margin: 1.5rem 0 0.75rem; }
+        .profile-info { font-size: 0.875rem; color: #6e6e73; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>👤 Mein Profil</h1>
+            <a href="index.html" class="btn-back">Zurück</a>
+        </div>
+
+        <p class="profile-info">Angemeldet als: <strong id="profileUsername">—</strong> · Rolle: <strong id="profileRole">—</strong></p>
+
+        <!-- Display name -->
+        <p class="section-title">Anzeigename ändern</p>
+        <div class="profile-card">
+            <label for="profileDisplayName">Anzeigename</label>
+            <input type="text" id="profileDisplayName" placeholder="Anzeigename" autocomplete="off">
+            <button class="btn btn-primary" id="saveDisplayNameBtn">Anzeigename speichern</button>
+        </div>
+
+        <!-- Password change -->
+        <p class="section-title">Kennwort ändern</p>
+        <div class="profile-card">
+            <label for="profileOldPw">Aktuelles Kennwort</label>
+            <input type="password" id="profileOldPw" placeholder="Aktuelles Kennwort" autocomplete="current-password">
+            <label for="profileNewPw">Neues Kennwort</label>
+            <input type="password" id="profileNewPw" placeholder="Neues Kennwort (min. 8 Zeichen)" autocomplete="new-password">
+            <label for="profileNewPw2">Neues Kennwort wiederholen</label>
+            <input type="password" id="profileNewPw2" placeholder="Neues Kennwort wiederholen" autocomplete="new-password">
+            <button class="btn btn-primary" id="savePasswordBtn">Kennwort ändern</button>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.requireRole(1);
+    </script>
+    <script src="js/profile.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+</html>

@@ -42,17 +42,17 @@ public class CategoriesFunction
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
 
-            var categories = new List<(string name, string svgSymbol)>();
+            var categories = new List<(string rowKey, string name, string svgSymbol)>();
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var name = entity.GetString("Name") ?? entity.RowKey;
+                var name = entity.GetString("DisplayName") ?? entity.GetString("Name") ?? entity.RowKey;
                 if (!string.IsNullOrWhiteSpace(name))
-                    categories.Add((name, entity.GetString("SvgSymbol") ?? ""));
+                    categories.Add((entity.RowKey, name, entity.GetString("SvgSymbol") ?? ""));
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             categories.Sort((a, b) => comparer.Compare(a.name, b.name));
-            return new OkObjectResult(categories.Select(c => new { c.name, c.svgSymbol }));
+            return new OkObjectResult(categories.Select(c => new { rowKey = c.rowKey, displayName = c.name, c.svgSymbol }));
         }
         catch (Exception ex)
         {
@@ -73,8 +73,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
@@ -85,7 +85,7 @@ public class CategoriesFunction
                 items.Add((
                     entity.PartitionKey,
                     entity.RowKey,
-                    entity.GetString("Name") ?? entity.RowKey,
+                    entity.GetString("DisplayName") ?? entity.GetString("Name") ?? entity.RowKey,
                     entity.GetString("SvgSymbol") ?? ""
                 ));
             }
@@ -93,7 +93,7 @@ public class CategoriesFunction
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             items.Sort((a, b) => comparer.Compare(a.name, b.name));
 
-            return new OkObjectResult(items.Select(i => new { i.partitionKey, i.rowKey, i.name, i.svgSymbol }));
+            return new OkObjectResult(items.Select(i => new { i.partitionKey, i.rowKey, displayName = i.name, i.svgSymbol }));
         }
         catch (Exception ex)
         {
@@ -113,8 +113,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var name = body.GetProperty("name").GetString();
@@ -132,14 +132,14 @@ public class CategoriesFunction
             var rowKey = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString("D15");
             var entity = new TableEntity("categories", rowKey)
             {
-                { "Name", name.Trim() },
+                { "DisplayName", name.Trim() },
                 { "SvgSymbol", svgSymbol }
             };
 
             await tableClient.AddEntityAsync(entity);
             _logger.LogInformation("Category created: {Name}", name);
 
-            return new CreatedResult("", new { partitionKey = "categories", rowKey, name = name.Trim(), svgSymbol });
+            return new CreatedResult("", new { partitionKey = "categories", rowKey, displayName = name.Trim(), svgSymbol });
         }
         catch (Exception ex)
         {
@@ -160,8 +160,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.DeleteEntityAsync("categories", rowKey);
@@ -188,8 +188,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var tableClient = _tableService.GetTableClient("Categories");
@@ -198,7 +198,7 @@ public class CategoriesFunction
             if (body.TryGetProperty("name", out var nameProp))
             {
                 var n = nameProp.GetString()?.Trim();
-                if (!string.IsNullOrWhiteSpace(n)) entity.Value["Name"] = n;
+                if (!string.IsNullOrWhiteSpace(n)) entity.Value["DisplayName"] = n;
             }
             if (body.TryGetProperty("svgSymbol", out var svgProp))
                 entity.Value["SvgSymbol"] = svgProp.GetString() ?? "";
@@ -227,8 +227,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var tableClient = _tableService.GetTableClient("Categories");
             await tableClient.CreateIfNotExistsAsync();
@@ -258,7 +258,7 @@ public class CategoriesFunction
                 await Task.Delay(5); // ensure unique rowKeys
                 var entity = new TableEntity("categories", rowKey)
                 {
-                    { "Name", name },
+                    { "DisplayName", name },
                     { "SvgSymbol", svg }
                 };
                 await tableClient.AddEntityAsync(entity);
@@ -287,8 +287,8 @@ public class CategoriesFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 4) == 0)
+                return AdminAuth.Forbidden();
 
             var defaults = new Dictionary<string, string>
             {
@@ -303,7 +303,7 @@ public class CategoriesFunction
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var name = entity.GetString("Name") ?? "";
+                var name = entity.GetString("DisplayName") ?? entity.GetString("Name") ?? "";
                 var existing = entity.GetString("SvgSymbol") ?? "";
                 if (string.IsNullOrWhiteSpace(existing) && defaults.TryGetValue(name, out var svg))
                 {

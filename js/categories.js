@@ -80,7 +80,7 @@
             mid.style.flex = '1';
             const nameDiv = document.createElement('div');
             nameDiv.className = 'item-name';
-            nameDiv.textContent = item.name;
+            nameDiv.textContent = item.displayName;
             const picker = document.createElement('div');
             picker.className = 'icon-picker';
 
@@ -130,7 +130,7 @@
             });
 
             delBtn.addEventListener('click', async function () {
-                if (!confirm('\u201E' + item.name + '\u201C wirklich löschen?')) return;
+                if (!confirm('\u201E' + item.displayName + '\u201C wirklich löschen?')) return;
                 try {
                     const res = await fetch(`${API_BASE}/manage/categories/${encodeURIComponent(item.rowKey)}`, {
                         method: 'DELETE',
@@ -138,7 +138,7 @@
                     });
                     if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
                     if (!res.ok) throw new Error();
-                    showToast('\u201E' + item.name + '\u201C gelöscht');
+                    showToast('\u201E' + item.displayName + '\u201C gelöscht');
                     await loadCategories();
                 } catch {
                     showToast('Fehler beim Löschen', true);

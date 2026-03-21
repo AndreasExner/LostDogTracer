@@ -8,35 +8,164 @@
     <meta name="theme-color" content="#ffffff">
     <title>LostDogTracer</title>
     <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="gfx/lostdogtracer-logo-180x180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="gfx/lostdogtracer-logo-167x167.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="gfx/lostdogtracer-logo-152x152.png">
     <style>
-        .landing-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 2rem 1.5rem;
-            text-align: center;
+        .login-box {
+            max-width: 360px;
+            margin: 3rem auto;
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #d2d2d7;
+            padding: 2rem;
         }
-        .landing-logo {
-            max-width: 430px;
-            width: 100%;
-            height: auto;
+        .login-box h2 { font-size: 1.25rem; margin-bottom: 1.25rem; text-align: center; }
+        .login-box input {
+            width: 100%; padding: 0.75rem 1rem; font-size: 1rem;
+            border: 1px solid #d2d2d7; border-radius: 10px; outline: none;
+            margin-bottom: 0.75rem;
         }
+        .login-box input:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); }
+        .login-box .btn { width: 100%; padding: 0.85rem; font-size: 1rem; }
+        .login-error { color: #ff3b30; font-size: 0.875rem; text-align: center; margin-top: 0.5rem; display: none; }
+        .admin-header .logout-btn {
+            margin-left: auto; font-size: 0.875rem; color: #ff3b30;
+            background: none; border: none; cursor: pointer; text-decoration: underline;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
-    <div class="landing-container">
-        <img src="gfx/lostdogtracer-logo-860w.png"
-             srcset="gfx/lostdogtracer-logo-430w.png 430w,
-                     gfx/lostdogtracer-logo-860w.png 860w,
-                     gfx/lostdogtracer-logo-1290w.png 1290w"
-             sizes="(max-width: 480px) 430px, 860px"
-             alt="LostDogTracer Logo"
-             class="landing-logo">
+    <!-- Login form -->
+    <div class="admin-container" id="loginSection">
+        <div class="login-box">
+            <img
+                src="gfx/lostdogtracer-logo-860w.png"
+                srcset="
+                    gfx/lostdogtracer-logo-430w.png   430w,
+                    gfx/lostdogtracer-logo-860w.png    860w,
+                    gfx/lostdogtracer-logo-1290w.png  1290w"
+                sizes="(max-width: 360px) 100vw, 328px"
+                alt="LostDogTracer Logo"
+                style="display: block; margin: 0 auto 1.25rem; max-width: 100%; height: auto; border-radius: 10px;"
+            />
+            <h2>🔐 Anmeldung</h2>
+            <input type="text" id="loginUser" placeholder="Benutzername" autocomplete="username">
+            <input type="password" id="loginPass" placeholder="Kennwort" autocomplete="current-password">
+            <button class="btn btn-primary" id="loginBtn">Anmelden</button>
+            <p class="login-error" id="loginError">Benutzername oder Kennwort falsch</p>
+        </div>
     </div>
+
+    <!-- Menu (hidden until logged in) -->
+    <div class="admin-container hidden" id="menuSection">
+        <div class="admin-header">
+            <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="width:100px;height:auto;border-radius:10px;flex-shrink:0;">
+            <h1>Übersicht</h1>
+            <button class="logout-btn" id="logoutBtn">Abmelden</button>
+        </div>
+
+        <div class="menu-grid">
+            <a href="field-home.html" class="menu-card" data-min-role="1">
+                <span class="icon">🚩</span>
+                <span class="label">Erfassen</span>
+                <span class="desc">GPS-Standorte im Feld erfassen</span>
+            </a>
+            <a href="gpsrecords.html" class="menu-card" data-min-role="2">
+                <span class="icon">📍</span>
+                <span class="label">GPS-Daten</span>
+                <span class="desc">GPS-Aufzeichnungen anzeigen &amp; verwalten</span>
+            </a>
+            <a href="lostdogs.html" class="menu-card" data-min-role="3">
+                <span class="icon">🐕</span>
+                <span class="label">Hunde</span>
+                <span class="desc">Hundenamen verwalten</span>
+            </a>
+            <a href="categories.html" class="menu-card" data-min-role="4">
+                <span class="icon">🏷️</span>
+                <span class="label">Kategorien</span>
+                <span class="desc">GPS-Kategorien verwalten</span>
+            </a>
+            <a href="users.html" class="menu-card" data-min-role="3">
+                <span class="icon">🔑</span>
+                <span class="label">Benutzer</span>
+                <span class="desc">Benutzerkonten verwalten</span>
+            </a>
+            <a href="backup.html" class="menu-card" data-min-role="4">
+                <span class="icon">🔧</span>
+                <span class="label">Wartung</span>
+                <span class="desc">Daten-Backup &amp; Wiederherstellung</span>
+            </a>
+            <a href="profile.html" class="menu-card" data-min-role="1">
+                <span class="icon">👤</span>
+                <span class="label">Mein Profil</span>
+                <span class="desc">Kennwort &amp; Anzeigename ändern</span>
+            </a>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+    (function () {
+        const loginSection = document.getElementById('loginSection');
+        const menuSection = document.getElementById('menuSection');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginUser = document.getElementById('loginUser');
+        const loginPass = document.getElementById('loginPass');
+        const loginError = document.getElementById('loginError');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Check if already logged in
+        FT_AUTH.isLoggedIn().then(valid => {
+            if (valid) showMenu();
+        });
+
+        loginBtn.addEventListener('click', doLogin);
+        loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+        loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') loginPass.focus(); });
+
+        logoutBtn.addEventListener('click', () => {
+            FT_AUTH.logout();
+            menuSection.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            loginError.style.display = 'none';
+            loginUser.value = '';
+            loginPass.value = '';
+        });
+
+        async function doLogin() {
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Wird geprüft…';
+            loginError.style.display = 'none';
+
+            const token = await FT_AUTH.login(loginUser.value, loginPass.value);
+            if (token) {
+                showMenu();
+            } else {
+                loginError.style.display = 'block';
+            }
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Anmelden';
+        }
+
+        function showMenu() {
+            loginSection.classList.add('hidden');
+            menuSection.classList.remove('hidden');
+            // Hide menu cards based on role level
+            const level = FT_AUTH.getRoleLevel();
+            document.querySelectorAll('.menu-card[data-min-role]').forEach(card => {
+                const min = parseInt(card.dataset.minRole, 10);
+                if (level < min) card.style.display = 'none';
+            });
+        }
+    })();
+    </script>
+    <div class="legal-footer" style="text-align:center;padding:1rem;font-size:0.75rem;color:#6e6e73;"></div>
     <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
 </body>
 </html>

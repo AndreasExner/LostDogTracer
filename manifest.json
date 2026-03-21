@@ -1,19 +1,19 @@
 {
     "name": "LostDogTracer",
     "short_name": "LostDogTracer",
-    "description": "GPS Standort Tracker für vermisste Hunde",
+    "description": "Support App für die Suche vermisster Hunde",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#f5f5f7",
     "theme_color": "#ffffff",
     "icons": [
         {
-            "src": "icons/icon-192.png",
+            "src": "gfx/lostdogtracer-logo-192x192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "icons/icon-512.png",
+            "src": "gfx/lostdogtracer-logo-512x512.png",
             "sizes": "512x512",
             "type": "image/png"
         }

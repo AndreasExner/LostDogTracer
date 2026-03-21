@@ -41,23 +41,23 @@ public class LostDogsFunction
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
-            var items = new List<(string display, string location, string suffix)>();
+            var items = new List<(string rowKey, string display, string displayName, string suffix)>();
 
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var location = entity.GetString("Location") ?? entity.RowKey;
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
                 var suffix = entity.GetString("Suffix") ?? "";
-                if (!string.IsNullOrWhiteSpace(location))
+                if (!string.IsNullOrWhiteSpace(displayName))
                 {
-                    var display = string.IsNullOrEmpty(suffix) ? location : $"{location} ({suffix})";
-                    items.Add((display, location, suffix));
+                    var display = string.IsNullOrEmpty(suffix) ? displayName : $"{displayName} ({suffix})";
+                    items.Add((entity.RowKey, display, displayName, suffix));
                 }
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             items.Sort((a, b) => comparer.Compare(a.display, b.display));
 
-            return new OkObjectResult(items.Select(i => i.location));
+            return new OkObjectResult(items.Select(i => new { rowKey = i.rowKey, displayName = i.displayName }));
         }
         catch (Exception ex)
         {
@@ -88,8 +88,8 @@ public class LostDogsFunction
             var filter = $"Suffix eq '{key.Replace("'", "''")}'";
             await foreach (var entity in tableClient.QueryAsync<TableEntity>(filter))
             {
-                var location = entity.GetString("Location") ?? entity.RowKey;
-                return new OkObjectResult(new { location });
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
+                return new OkObjectResult(new { displayName, rowKey = entity.RowKey });
             }
 
             return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
@@ -112,26 +112,26 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Read.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
-            var items = new List<(string partitionKey, string rowKey, string location, string suffix)>();
+            var items = new List<(string partitionKey, string rowKey, string displayName, string suffix)>();
             await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
                 items.Add((
                     entity.PartitionKey,
                     entity.RowKey,
-                    entity.GetString("Location") ?? entity.RowKey,
+                    entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey,
                     entity.GetString("Suffix") ?? ""
                 ));
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
-            items.Sort((a, b) => comparer.Compare(a.location, b.location));
+            items.Sort((a, b) => comparer.Compare(a.displayName, b.displayName));
 
-            return new OkObjectResult(items.Select(i => new { i.partitionKey, i.rowKey, i.location, i.suffix }));
+            return new OkObjectResult(items.Select(i => new { i.partitionKey, i.rowKey, i.displayName, i.suffix }));
         }
         catch (Exception ex)
         {
@@ -151,38 +151,81 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
-            var location = body.GetProperty("location").GetString();
+            var name = body.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+            var location = body.TryGetProperty("location", out var locProp) ? locProp.GetString() : null;
 
-            if (string.IsNullOrWhiteSpace(location))
+            if (string.IsNullOrWhiteSpace(name))
                 return new BadRequestObjectResult(new { error = "Name darf nicht leer sein" });
 
             var tableClient = _tableService.GetTableClient("LostDogs");
             await tableClient.CreateIfNotExistsAsync();
 
-            var trimmedLocation = location.Trim();
+            var trimmedName = name.Trim();
+            var trimmedLocation = location?.Trim() ?? "";
+            var displayName = string.IsNullOrEmpty(trimmedLocation) ? trimmedName : $"{trimmedName}, {trimmedLocation}";
 
             // Generate cryptographically random 6-char alphanumeric suffix
             var suffix = GenerateRandomSuffix(6);
-            var rowKey = $"{trimmedLocation}_{suffix}";
+            var rowKey = $"{trimmedName}_{suffix}";
 
-            var entity = new TableEntity("locations", rowKey)
+            var entity = new TableEntity("lostdogs", rowKey)
             {
-                { "Location", trimmedLocation },
+                { "DisplayName", displayName },
                 { "Suffix", suffix }
             };
 
             await tableClient.AddEntityAsync(entity);
-            _logger.LogInformation("Lost dog created: {Location} ({Suffix})", trimmedLocation, suffix);
+            _logger.LogInformation("Lost dog created: {DisplayName} ({Suffix})", displayName, suffix);
 
-            return new CreatedResult("", new { partitionKey = "locations", rowKey, location = trimmedLocation, suffix });
+            return new CreatedResult("", new { partitionKey = "lostdogs", rowKey, displayName, suffix });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating lost dog");
+            return new StatusCodeResult(500);
+        }
+    }
+
+    [Function("UpdateLostDog")]
+    public async Task<IActionResult> UpdateLostDog(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "manage/lost-dogs/{rowKey}")] HttpRequest req,
+        string rowKey)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+
+            var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
+            var displayName = body.TryGetProperty("displayName", out var dnProp) ? dnProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                return new BadRequestObjectResult(new { error = "Anzeigename darf nicht leer sein" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            var entity = await tableClient.GetEntityAsync<TableEntity>("lostdogs", rowKey);
+            entity.Value["DisplayName"] = displayName.Trim();
+            await tableClient.UpdateEntityAsync(entity.Value, entity.Value.ETag, TableUpdateMode.Replace);
+
+            _logger.LogInformation("Lost dog updated: RowKey={RowKey}", rowKey);
+            return new OkObjectResult(new { message = "Aktualisiert" });
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating lost dog");
             return new StatusCodeResult(500);
         }
     }
@@ -199,10 +242,10 @@ public class LostDogsFunction
             var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (!_rateLimit.Write.IsAllowed(ip))
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_adminAuth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
             var tableClient = _tableService.GetTableClient("LostDogs");
-            await tableClient.DeleteEntityAsync("locations", rowKey);
+            await tableClient.DeleteEntityAsync("lostdogs", rowKey);
             _logger.LogInformation("Lost dog deleted: RowKey={RowKey}", rowKey);
             return new OkObjectResult(new { message = "Gelöscht" });
         }

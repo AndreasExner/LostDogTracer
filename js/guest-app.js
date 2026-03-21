@@ -26,6 +26,7 @@
     let toastTimeout = null;
     let selectedPhotoBlob = null;
     let resolvedDogName = '';
+    let resolvedDogRowKey = '';
     const charCounterEl = document.getElementById('charCounter');
 
     // ── Character counter ────────────────────────────────────────
@@ -45,14 +46,9 @@
             return;
         }
 
-        await loadCategories();
-        restoreCategory();
+        await loadGuestCategory();
         updateButtonState();
 
-        categoryEl.addEventListener('change', () => {
-            localStorage.setItem(STORAGE_KEY_CATEGORY, categoryEl.value);
-            updateButtonState();
-        });
         saveBtnEl.addEventListener('click', onSaveLocation);
         commentEl.addEventListener('input', updateCharCounter);
 
@@ -94,7 +90,8 @@
                 return false;
             }
             const data = await res.json();
-            resolvedDogName = data.location;
+            resolvedDogName = data.displayName;
+            resolvedDogRowKey = data.rowKey;
             dogNameEl.textContent = resolvedDogName;
             return true;
         } catch (err) {
@@ -159,31 +156,33 @@
         });
     }
 
-    // ── Load categories ──────────────────────────────────────────
-    async function loadCategories() {
-        try {
-            categoryEl.classList.add('loading');
-            const res = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
-            if (!res.ok) throw new Error('Fehler beim Laden der Kategorien');
-            const cats = await res.json();
-            const catNames = cats.map(c => c.name || c);
-            catNames.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                categoryEl.appendChild(opt);
-            });
-        } catch (err) {
-            console.error(err);
-            showToast('Kategorien konnten nicht geladen werden', true);
-        } finally {
-            categoryEl.classList.remove('loading');
-        }
-    }
+    // ── Load guest category from config ────────────────────────────
+    const categoryDisplayEl = document.getElementById('categoryDisplay');
 
-    function restoreCategory() {
-        const saved = localStorage.getItem(STORAGE_KEY_CATEGORY);
-        if (saved) categoryEl.value = saved;
+    async function loadGuestCategory() {
+        try {
+            // Wait for config from theme.js or fetch directly
+            let cfg = window.FT_CONFIG;
+            if (!cfg) {
+                const res = await fetch(`${API_BASE}/config`, { headers: { 'X-API-Key': API_KEY } });
+                if (res.ok) cfg = await res.json();
+            }
+            const catRowKey = cfg?.guestCategoryRowKey || '';
+            if (!catRowKey) return;
+
+            categoryEl.value = catRowKey;
+
+            // Resolve displayName from categories API
+            const catRes = await fetch(`${API_BASE}/categories`, { headers: { 'X-API-Key': API_KEY } });
+            if (catRes.ok) {
+                const cats = await catRes.json();
+                const match = cats.find(c => c.rowKey === catRowKey);
+                if (match) categoryDisplayEl.textContent = match.displayName;
+                else categoryDisplayEl.textContent = catRowKey;
+            }
+        } catch {
+            categoryDisplayEl.textContent = '(Fehler)';
+        }
     }
 
     function updateButtonState() {
@@ -196,7 +195,7 @@
     function onEditRecords() {
         const params = new URLSearchParams();
         params.set('name', 'HALTER*IN');
-        params.set('lostDog', resolvedDogName);
+        params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
         window.location.href = 'guest-records.html?' + params;
     }
@@ -204,7 +203,7 @@
     function onShowMap() {
         const params = new URLSearchParams();
         params.set('name', 'HALTER*IN');
-        params.set('lostDog', resolvedDogName);
+        params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
         window.location.href = 'guest-map.html?' + params;
     }
@@ -220,7 +219,7 @@
             const position = await getCurrentPosition();
             const entry = {
                 name: 'HALTER*IN',
-                lostDog: resolvedDogName,
+                lostDog: resolvedDogRowKey,
                 category: categoryEl.value,
                 comment: commentEl.value.trim(),
                 latitude: position.coords.latitude,

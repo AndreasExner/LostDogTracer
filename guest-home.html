@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="css/shared.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="gfx/lostdogtracer-logo-180x180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="gfx/lostdogtracer-logo-167x167.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="gfx/lostdogtracer-logo-152x152.png">
 </head>
 <body>
     <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
@@ -20,10 +23,9 @@
         </div>
 
         <div class="form-group">
-            <label for="category">Kategorie</label>
-            <select id="category" class="form-control">
-                <option value="">Bitte wählen...</option>
-            </select>
+            <label>Kategorie</label>
+            <input type="hidden" id="category">
+            <div id="categoryDisplay" class="form-control" style="background:var(--bg-badge);cursor:default;">—</div>
         </div>
 
         <div class="form-group">
@@ -55,6 +57,7 @@
 
         <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="display:block;margin-top:1.5rem;height:auto;width:100px;">
     </div>
+    <div class="legal-footer" style="text-align:center;padding:1rem;font-size:0.75rem;color:#6e6e73;"></div>
     <script src="js/theme.js"></script>
     <script src="js/guest-app.js"></script>
     <script src="js/guest-nav.js"></script>

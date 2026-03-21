@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
-    <title>LostDogTracer – Karte</title>
+    <title>LostDogTracer – Feld-Karte</title>
     <link rel="stylesheet" href="css/shared.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/map.css">
@@ -18,7 +18,7 @@
     <div class="admin-container" style="max-width: 1200px;">
         <div class="admin-header">
             <h1>📍 Karte</h1>
-            <a href="guest-home.html" class="btn-back" id="backLink">Zurück</a>
+            <a href="field-home.html" class="btn-back">Zurück</a>
         </div>
 
         <div class="map-info">
@@ -43,16 +43,11 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        // Set back link to guest-home with key
-        (function() {
-            var p = new URLSearchParams(location.search);
-            var key = p.get('key');
-            if (key) document.getElementById('backLink').href = 'guest-home.html?key=' + encodeURIComponent(key);
-        })();
+        FT_AUTH.requireRole(1);
     </script>
     <script src="js/svg-icons.js"></script>
-    <script src="js/guest-map.js"></script>
+    <script src="js/field-map.js"></script>
     <script src="js/theme.js"></script>
-    <script src="js/guest-nav.js"></script>
+    <script src="js/field-nav.js"></script>
 </body>
 </html>

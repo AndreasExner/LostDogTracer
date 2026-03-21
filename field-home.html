@@ -6,19 +6,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#ffffff">
-    <title>LostDogTracer</title>
+    <title>LostDogTracer – Feldarbeit</title>
     <link rel="stylesheet" href="css/shared.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="gfx/lostdogtracer-logo-180x180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="gfx/lostdogtracer-logo-167x167.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="gfx/lostdogtracer-logo-152x152.png">
 </head>
 <body>
     <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
     <div class="app-container">
         <div class="form-group">
-            <label for="userName">Dein Name</label>
-            <select id="userName" class="form-control">
-                <option value="">Bitte wählen...</option>
-            </select>
+            <label>Dein Name</label>
+            <input type="hidden" id="userNameKey">
+            <input type="text" id="userName" class="form-control" readonly style="background:var(--bg-secondary,#f5f5f7);color:var(--text-primary,#1d1d1f);cursor:default;">
         </div>
 
         <div class="form-group">
@@ -64,10 +66,14 @@
 
         <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="display:block;margin-top:1.5rem;height:auto;width:100px;">
     </div>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.requireRole(1);
+    </script>
     <script src="js/theme.js"></script>
     <script src="js/offline-store.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/main-nav.js"></script>
+    <script src="js/field-app.js"></script>
+    <script src="js/field-nav.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));

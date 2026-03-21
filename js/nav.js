@@ -1,19 +1,22 @@
-// ── Admin Hamburger Navigation ──────────────────────────────────
+// ── Hamburger Navigation ──────────────────────────────────
 (function () {
-    // Inject on admin sub-pages and admin.html menu page
+    // Inject on sub-pages and index.html menu page
     const path = location.pathname;
-    const isSubPage = /admin-(gpsrecords|map|names|lostdogs|categories|users|backup)\.html$/i.test(path);
-    const isAdminHome = /admin\.html$/i.test(path);
-    if (!isSubPage && !isAdminHome) return;
+    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|backup|profile)\.html$/i.test(path);
+    const isHome = /index\.html$/i.test(path) || path === '/' || path.endsWith('/');
+    if (!isSubPage && !isHome) return;
 
     const pages = [
-        { href: 'admin-gpsrecords.html', icon: '📍', label: 'GPS-Daten' },
-        { href: 'admin-names.html',      icon: '👤', label: 'Namen' },
-        { href: 'admin-lostdogs.html',   icon: '🐕', label: 'Hunde' },
-        { href: 'admin-categories.html', icon: '🏷️', label: 'Kategorien' },
-        { href: 'admin-users.html',      icon: '🔑', label: 'Admin-Konten' },
-        { href: 'admin-backup.html',     icon: '🔧', label: 'Wartung' },
+        { href: 'field-home.html', icon: '🚩', label: 'Erfassen', minRole: 1 },
+        { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten', minRole: 2 },
+        { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', minRole: 3 },
+        { href: 'categories.html', icon: '🏷️', label: 'Kategorien', minRole: 4 },
+        { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 3 },
+        { href: 'backup.html',     icon: '🔧', label: 'Wartung', minRole: 4 },
+        { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
     ];
+
+    const roleLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
 
     // Build DOM
     const overlay = document.createElement('div');
@@ -23,11 +26,12 @@
     drawer.className = 'nav-drawer';
 
     // Home link
-    drawer.innerHTML = `<a href="admin.html"${isAdminHome ? ' class="active"' : ''}><span class="nav-icon">🏠</span> Übersicht</a><div class="nav-divider"></div>`;
+    drawer.innerHTML = `<a href="index.html"${isHome ? ' class="active"' : ''}><span class="nav-icon">🏠</span> Übersicht</a><div class="nav-divider"></div>`;
 
-    // Page links
+    // Page links (filtered by role)
     const currentFile = path.split('/').pop();
     pages.forEach(p => {
+        if (roleLevel < (p.minRole || 1)) return;
         const a = document.createElement('a');
         a.href = p.href;
         a.innerHTML = `<span class="nav-icon">${p.icon}</span> ${p.label}`;
@@ -57,7 +61,7 @@
     logoutLink.addEventListener('click', e => {
         e.preventDefault();
         if (typeof FT_AUTH !== 'undefined') FT_AUTH.logout();
-        location.href = 'admin.html';
+        location.href = 'index.html';
     });
     drawer.appendChild(logoutLink);
 

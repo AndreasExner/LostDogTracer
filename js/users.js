@@ -1,14 +1,13 @@
-/* js/admin-users.js — Admin-Konten Verwaltung */
+/* js/users.js — Benutzerverwaltung */
 (function () {
     const API = FT_AUTH.getApiBase();
 
     /* ── DOM refs ─────────────────────────────── */
     const userList        = document.getElementById('userList');
-    const currentUserEl   = document.getElementById('currentUser');
 
-    const changePwModal   = document.getElementById('changePwModal');
     const createUserModal = document.getElementById('createUserModal');
     const resetPwModal    = document.getElementById('resetPwModal');
+    const editUserModal   = document.getElementById('editUserModal');
 
     let currentUsername = '';
 
@@ -49,12 +48,11 @@
         if (!res) return;
         const data = await res.json();
         currentUsername = data.username || '';
-        currentUserEl.textContent = currentUsername || '—';
     }
 
     /* ── Load user list ──────────────────────── */
     async function loadUsers() {
-        const res = await apiCall(`${API}/manage/admin-users`, { headers: FT_AUTH.adminHeaders() });
+        const res = await apiCall(`${API}/manage/users`, { headers: FT_AUTH.adminHeaders() });
         if (!res) return;
         if (!res.ok) { showToast('Fehler beim Laden', false); return; }
         const users = await res.json();
@@ -66,19 +64,24 @@
             userList.innerHTML = '<p style="color:#6e6e73;text-align:center;padding:2rem">Keine Benutzer.</p>';
             return;
         }
+        const myLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
+        const isAdmin = myLevel >= 4;
         userList.innerHTML = users.map(u => {
             const isSelf = u.username.toLowerCase() === currentUsername.toLowerCase();
             const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—';
             const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('de-DE') : 'Nie';
+            const role = u.role || 'User';
+            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}')">Bearbeiten</button>` : '';
+            const pwBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort</button>` : '';
+            const delBtn = (isAdmin && !isSelf) ? `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>` : '';
             return `
             <div class="user-card">
                 <div class="user-info">
                     <strong>${esc(u.displayName || u.username)}</strong>
-                    <small>@${esc(u.username)} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
+                    <small>@${esc(u.username)} · ${esc(role)} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
                 </div>
                 <div class="user-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort zurücksetzen</button>
-                    ${isSelf ? '' : `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>`}
+                    ${editBtn}${pwBtn}${delBtn}
                 </div>
             </div>`;
         }).join('');
@@ -86,44 +89,19 @@
 
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-    /* ── Change own password ──────────────────── */
-    document.getElementById('changePwBtn').addEventListener('click', () => {
-        document.getElementById('oldPw').value = '';
-        document.getElementById('newPw').value = '';
-        document.getElementById('newPw2').value = '';
-        hideError('changePwError');
-        openModal(changePwModal);
-    });
-    document.getElementById('changePwCancel').addEventListener('click', () => closeModal(changePwModal));
-    document.getElementById('changePwSave').addEventListener('click', async () => {
-        const oldPw = document.getElementById('oldPw').value.trim();
-        const newPw = document.getElementById('newPw').value.trim();
-        const newPw2 = document.getElementById('newPw2').value.trim();
-
-        if (!oldPw || !newPw) { showError('changePwError', 'Bitte alle Felder ausfüllen.'); return; }
-        if (newPw.length < 8) { showError('changePwError', 'Mindestens 8 Zeichen.'); return; }
-        if (newPw !== newPw2) { showError('changePwError', 'Neue Kennwörter stimmen nicht überein.'); return; }
-
-        const res = await apiCall(`${API}/auth/change-password`, {
-            method: 'POST',
-            headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ oldPassword: oldPw, newPassword: newPw })
-        });
-        if (!res) return;
-        if (res.ok) {
-            closeModal(changePwModal);
-            showToast('Kennwort geändert');
-        } else {
-            const data = await res.json().catch(() => ({}));
-            showError('changePwError', data.error || 'Fehler beim Ändern.');
-        }
-    });
-
     /* ── Create user ─────────────────────────── */
     document.getElementById('addUserBtn').addEventListener('click', () => {
         document.getElementById('newUsername').value = '';
         document.getElementById('newDisplayName').value = '';
         document.getElementById('newUserPw').value = '';
+        // Manager: hide role dropdown (can only assign "User")
+        const roleSelect = document.getElementById('newUserRole');
+        if (FT_AUTH.getRoleLevel() < 4) {
+            roleSelect.value = 'User';
+            roleSelect.style.display = 'none';
+        } else {
+            roleSelect.style.display = '';
+        }
         hideError('createUserError');
         openModal(createUserModal);
     });
@@ -136,10 +114,10 @@
         if (!username || !password) { showError('createUserError', 'Benutzername und Kennwort sind Pflicht.'); return; }
         if (password.length < 8) { showError('createUserError', 'Kennwort: mindestens 8 Zeichen.'); return; }
 
-        const res = await apiCall(`${API}/manage/admin-users`, {
+        const res = await apiCall(`${API}/manage/users`, {
             method: 'POST',
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, displayName: displayName || username, password })
+            body: JSON.stringify({ username, displayName: displayName || username, password, role: document.getElementById('newUserRole').value })
         });
         if (!res) return;
         if (res.ok) {
@@ -168,7 +146,7 @@
         const pw = document.getElementById('resetNewPw').value.trim();
         if (!pw || pw.length < 8) { showError('resetPwError', 'Mindestens 8 Zeichen.'); return; }
 
-        const res = await apiCall(`${API}/manage/admin-users/${encodeURIComponent(resetTarget)}/reset-password`, {
+        const res = await apiCall(`${API}/manage/users/${encodeURIComponent(resetTarget)}/reset-password`, {
             method: 'POST',
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ newPassword: pw })
@@ -185,8 +163,8 @@
 
     /* ── Delete user ─────────────────────────── */
     AdminUsers.deleteUser = async function (username, display) {
-        if (!confirm(`Admin "${display}" wirklich löschen?`)) return;
-        const res = await apiCall(`${API}/manage/admin-users/${encodeURIComponent(username)}`, {
+        if (!confirm(`Benutzer "${display}" wirklich löschen?`)) return;
+        const res = await apiCall(`${API}/manage/users/${encodeURIComponent(username)}`, {
             method: 'DELETE',
             headers: FT_AUTH.adminHeaders()
         });
@@ -199,7 +177,37 @@
             showToast(data.error || 'Fehler beim Löschen', false);
         }
     };
+    /* ── Edit user (role + displayName) ─────── */
+    let editTarget = '';
+    AdminUsers.editUser = function (username, displayName, role) {
+        editTarget = username;
+        document.getElementById('editUserName').textContent = username;
+        document.getElementById('editDisplayName').value = displayName;
+        document.getElementById('editUserRole').value = role;
+        hideError('editUserError');
+        openModal(editUserModal);
+    };
+    document.getElementById('editUserCancel').addEventListener('click', () => closeModal(editUserModal));
+    document.getElementById('editUserSave').addEventListener('click', async () => {
+        const displayName = document.getElementById('editDisplayName').value.trim();
+        const role = document.getElementById('editUserRole').value;
+        if (!displayName) { showError('editUserError', 'Anzeigename darf nicht leer sein.'); return; }
 
+        const res = await apiCall(`${API}/manage/users/${encodeURIComponent(editTarget)}`, {
+            method: 'PUT',
+            headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ displayName, role })
+        });
+        if (!res) return;
+        if (res.ok) {
+            closeModal(editUserModal);
+            showToast('Benutzer aktualisiert');
+            loadUsers();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            showError('editUserError', data.error || 'Fehler beim Speichern.');
+        }
+    });
     /* ── Init ────────────────────────────────── */
     loadCurrentUser().then(() => loadUsers());
 })();

@@ -20,10 +20,10 @@
         return [...catDropdownEl.querySelectorAll('input:checked')].map(cb => cb.value);
     }
     function updateCatBtnText() {
-        const sel = getSelectedCategories();
-        if (sel.length === 0) catBtnEl.textContent = 'Alle Kategorien';
-        else if (sel.length === 1) catBtnEl.textContent = sel[0];
-        else catBtnEl.textContent = sel.length + ' Kategorien';
+        const checked = [...catDropdownEl.querySelectorAll('input:checked')];
+        if (checked.length === 0) catBtnEl.textContent = 'Alle Kategorien';
+        else if (checked.length === 1) catBtnEl.textContent = checked[0].parentElement.textContent.trim();
+        else catBtnEl.textContent = checked.length + ' Kategorien';
     }
     catBtnEl.addEventListener('click', e => { e.stopPropagation(); catDropdownEl.classList.toggle('hidden'); });
     document.addEventListener('click', e => { if (!catWrapEl.contains(e.target)) catDropdownEl.classList.add('hidden'); });
@@ -172,7 +172,7 @@
                     if (catRes.ok) {
                         const cats = await catRes.json();
                         cachedCategorySymbols = {};
-                        cats.forEach(c => { if (c.svgSymbol) cachedCategorySymbols[c.name] = c.svgSymbol; });
+                        cats.forEach(c => { if (c.svgSymbol) cachedCategorySymbols[c.displayName] = c.svgSymbol; });
                     }
                 } catch { /* use defaults */ }
             }
@@ -202,7 +202,7 @@
             while (filterDogEl.options.length > 1) filterDogEl.remove(1);
             currentDogs.forEach(d => {
                 const opt = document.createElement('option');
-                opt.value = d; opt.textContent = d;
+                opt.value = d.rowKey || d; opt.textContent = d.displayName || d;
                 filterDogEl.appendChild(opt);
             });
             filterDogEl.value = currentVal;
@@ -213,34 +213,38 @@
             while (filterNameEl.options.length > 1) filterNameEl.remove(1);
             currentNames.forEach(n => {
                 const opt = document.createElement('option');
-                opt.value = n; opt.textContent = n;
+                opt.value = n.rowKey || n; opt.textContent = n.displayName || n;
                 filterNameEl.appendChild(opt);
             });
             filterNameEl.value = currentNameVal;
 
-            // Populate category filter dropdown (only on first load)
+            // Populate category filter dropdown (only on first load — load ALL categories, not just filtered ones)
             if (!catDropdownBuilt) {
-                const currentCats = data.categories || [];
-                const currentCatSel = getSelectedCategories();
-                catDropdownEl.innerHTML = '';
-                currentCats.forEach(c => {
-                    const label = document.createElement('label');
-                    label.className = 'multi-select-item';
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox';
-                    cb.value = c;
-                    if (currentCatSel.length > 0) {
-                        if (currentCatSel.includes(c)) cb.checked = true;
-                    } else if (filterCategory && filterCategory.split(',').includes(c)) {
-                        cb.checked = true;
+                try {
+                    const allCatsRes = await fetch(`${API_BASE}/categories`, { headers: FT_AUTH.publicHeaders() });
+                    if (allCatsRes.ok) {
+                        const allCats = await allCatsRes.json();
+                        catDropdownEl.innerHTML = '';
+                        allCats.forEach(c => {
+                            const key = c.rowKey || c;
+                            const display = c.displayName || c;
+                            const label = document.createElement('label');
+                            label.className = 'multi-select-item';
+                            const cb = document.createElement('input');
+                            cb.type = 'checkbox';
+                            cb.value = key;
+                            if (filterCategory && filterCategory.split(',').includes(key)) {
+                                cb.checked = true;
+                            }
+                            cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
+                            label.appendChild(cb);
+                            label.appendChild(document.createTextNode(' ' + display));
+                            catDropdownEl.appendChild(label);
+                        });
+                        updateCatBtnText();
+                        catDropdownBuilt = true;
                     }
-                    cb.addEventListener('change', () => { updateCatBtnText(); onFilterChange(); });
-                    label.appendChild(cb);
-                    label.appendChild(document.createTextNode(' ' + c));
-                    catDropdownEl.appendChild(label);
-                });
-                updateCatBtnText();
-                catDropdownBuilt = true;
+                } catch { /* use data.categories as fallback */ }
             }
 
             if (records.length === 0) {
@@ -449,10 +453,10 @@
 
     editDeleteBtn.addEventListener('click', async () => {
         if (!editRecord) return;
-        if (!confirm('Diesen Eintrag wirklich l\u00f6schen?')) return;
+        if (!confirm('Diesen Eintrag wirklich löschen?')) return;
 
         editDeleteBtn.disabled = true;
-        editDeleteBtn.textContent = 'L\u00f6scht\u2026';
+        editDeleteBtn.textContent = 'Löscht…';
 
         try {
             const res = await fetch(`${API_BASE}/manage/gps-records/delete`, {
@@ -463,7 +467,7 @@
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
 
-            showToast('Eintrag gel\u00f6scht');
+            showToast('Eintrag gelöscht');
             cancelEdit();
 
             clusterGroup.clearLayers();
@@ -474,10 +478,10 @@
             colorIdx = 0;
             await loadAndDisplay();
         } catch {
-            showToast('Fehler beim L\u00f6schen', true);
+            showToast('Fehler beim Löschen', true);
         } finally {
             editDeleteBtn.disabled = false;
-            editDeleteBtn.textContent = 'L\u00f6schen';
+            editDeleteBtn.textContent = 'Löschen';
         }
     });
 
