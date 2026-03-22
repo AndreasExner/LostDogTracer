@@ -119,10 +119,10 @@
     async function loadMembers() {
         if (cachedUsers) return;
         memberSelect.innerHTML = '<option value="">Lädt…</option>';
-        const res = await apiCall(`${API}/manage/users`, { headers: FT_AUTH.adminHeaders() });
+        const res = await apiCall(`${API}/manage/equipment/members`, { headers: FT_AUTH.adminHeaders() });
         if (!res || !res.ok) { memberSelect.innerHTML = '<option value="">Fehler beim Laden</option>'; return; }
         const users = await res.json();
-        cachedUsers = users.filter(u => u.location && u.latitude && u.longitude);
+        cachedUsers = users;
         renderMemberOptions();
     }
 

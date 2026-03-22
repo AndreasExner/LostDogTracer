@@ -76,6 +76,58 @@ public class EquipmentFunction
         }
     }
 
+    /// <summary>Lightweight members list for equipment location assignment (minRole 2).</summary>
+    [Function("GetEquipmentMembers")]
+    public async Task<IActionResult> GetEquipmentMembers(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "manage/equipment/members")] HttpRequest req)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
+                return AdminAuth.Forbidden();
+
+            var table = _tableService.GetTableClient("Users");
+            await table.CreateIfNotExistsAsync();
+
+            var members = new List<object>();
+            await foreach (var entity in table.QueryAsync<TableEntity>(
+                filter: "PartitionKey eq 'users'",
+                select: new[] { "RowKey", "DisplayName", "Location", "Latitude", "Longitude" }))
+            {
+                var loc = entity.GetString("Location");
+                var lat = entity.GetDouble("Latitude");
+                var lng = entity.GetDouble("Longitude");
+                if (!string.IsNullOrWhiteSpace(loc) && lat.HasValue && lng.HasValue)
+                {
+                    members.Add(new
+                    {
+                        displayName = entity.GetString("DisplayName") ?? entity.RowKey,
+                        location = loc,
+                        latitude = lat.Value,
+                        longitude = lng.Value
+                    });
+                }
+            }
+
+            var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
+            members.Sort((a, b) => comparer.Compare(
+                ((dynamic)a).displayName as string ?? "",
+                ((dynamic)b).displayName as string ?? ""));
+
+            return new OkObjectResult(members);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading equipment members");
+            return new StatusCodeResult(500);
+        }
+    }
+
     [Function("CreateEquipment")]
     public async Task<IActionResult> CreateEquipment(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/equipment")] HttpRequest req)
