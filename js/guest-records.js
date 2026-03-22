@@ -14,10 +14,11 @@
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
 
-    // Read name + lostDog from URL params
+    // Read name + lostDog + token from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const filterName = urlParams.get('name') || '';
     const filterDog = urlParams.get('lostDog') || '';
+    const guestToken = urlParams.get('token') || localStorage.getItem('lostdogtracer_guest_token') || '';
 
     let currentPage = 1;
     let data = { records: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 1 };
@@ -76,6 +77,7 @@
         params.set('page', currentPage);
         params.set('name', filterName);
         params.set('lostDog', filterDog);
+        if (guestToken) params.set('guestToken', guestToken);
 
         try {
             const res = await fetch(`${API_BASE}/my-records?${params}`, {
@@ -107,8 +109,11 @@
             const photoCell = r.photoUrl
                 ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
                 : '<td class="no-photo">—</td>';
+            const cbCell = r.isOwner
+                ? `<td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>`
+                : '<td></td>';
             tr.innerHTML = `
-                <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
+                ${cbCell}
                 <td>${formatDate(r.recordedAt)}</td>
                 <td>${esc(r.category || '')}</td>
                 <td>${esc(r.comment || '')}</td>
@@ -172,7 +177,7 @@
             const res = await fetch(`${API_BASE}/my-records/delete`, {
                 method: 'POST',
                 headers: FT_AUTH.publicHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ name: filterName, lostDog: filterDog, keys: sel })
+                body: JSON.stringify({ name: filterName, lostDog: filterDog, guestToken: guestToken || null, keys: sel })
             });
             if (!res.ok) throw new Error();
             const result = await res.json();

@@ -43,11 +43,16 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        // Set back link to guest-home with key
+        // Set back link to guest-home with key + token
         (function() {
             var p = new URLSearchParams(location.search);
             var key = p.get('key');
-            if (key) document.getElementById('backLink').href = 'guest-home.html?key=' + encodeURIComponent(key);
+            var token = p.get('token');
+            if (key) {
+                var href = 'guest-home.html?key=' + encodeURIComponent(key);
+                if (token) href += '&token=' + encodeURIComponent(token);
+                document.getElementById('backLink').href = href;
+            }
         })();
     </script>
     <script src="js/svg-icons.js"></script>

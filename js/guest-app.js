@@ -5,10 +5,13 @@
     const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
     const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';
     const STORAGE_KEY_CATEGORY = 'lostdogtracer_guest_category';
+    const STORAGE_KEY_UUID = 'lostdogtracer_guest_uuid';
+    const STORAGE_KEY_TOKEN = 'lostdogtracer_guest_token';
 
-    // ── Read key from URL ────────────────────────────────────────
+    // ── Read key + token from URL ────────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
     const guestKey = urlParams.get('key') || '';
+    const urlToken = urlParams.get('token') || '';
 
     const dogNameEl = document.getElementById('dogName');
     const categoryEl = document.getElementById('category');
@@ -27,6 +30,7 @@
     let selectedPhotoBlob = null;
     let resolvedDogName = '';
     let resolvedDogRowKey = '';
+    let guestToken = '';
     const charCounterEl = document.getElementById('charCounter');
 
     // ── Character counter ────────────────────────────────────────
@@ -45,6 +49,9 @@
             if (!guestKey) setInvalidState('Kein Key in der URL');
             return;
         }
+
+        // ── Guest token handling ─────────────────────────────────
+        await ensureGuestToken();
 
         await loadGuestCategory();
         updateButtonState();
@@ -72,6 +79,92 @@
         if (editBtnEl) editBtnEl.disabled = true;
         if (mapBtnEl) mapBtnEl.disabled = true;
         if (detail) showToast(detail, true);
+    }
+
+    // ── Guest token: UUID + registration ─────────────────────────
+    function getOrCreateUuid() {
+        let uuid = localStorage.getItem(STORAGE_KEY_UUID);
+        if (!uuid) {
+            uuid = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+            localStorage.setItem(STORAGE_KEY_UUID, uuid);
+        }
+        return uuid;
+    }
+
+    async function ensureGuestToken() {
+        // 1. Token from URL → store and use
+        if (urlToken) {
+            localStorage.setItem(STORAGE_KEY_TOKEN, urlToken);
+            guestToken = urlToken;
+            return;
+        }
+
+        // 2. Token already in localStorage
+        const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+        if (storedToken) {
+            guestToken = storedToken;
+            return;
+        }
+
+        // 3. Register: get new token from backend
+        const uuid = getOrCreateUuid();
+        try {
+            const res = await fetch(`${API_BASE}/guest/register`, {
+                method: 'POST',
+                headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uuid, dogKey: guestKey })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                guestToken = data.token;
+                localStorage.setItem(STORAGE_KEY_TOKEN, guestToken);
+                if (!data.existing) showPersonalLinkDialog();
+            }
+        } catch {
+            // Offline or error — continue without token
+        }
+    }
+
+    function buildPersonalLink() {
+        const base = location.origin + location.pathname;
+        const params = new URLSearchParams();
+        params.set('key', guestKey);
+        params.set('token', guestToken);
+        return base + '?' + params;
+    }
+
+    function showPersonalLinkDialog() {
+        const link = buildPersonalLink();
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:14px;padding:2rem;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+                <h3 style="margin:0 0 0.75rem;font-size:1.125rem;">Dein persönlicher Link</h3>
+                <p style="font-size:0.875rem;color:#6e6e73;margin-bottom:1rem;">Bitte speichere diesen Link als Lesezeichen. Damit kannst du deine eigenen Einträge später löschen.</p>
+                <input type="text" readonly value="${link.replace(/"/g, '&quot;')}" id="guestLinkInput" style="width:100%;padding:0.75rem 1rem;font-size:0.8125rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;background:#f5f5f7;">
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+                    <button class="btn btn-secondary btn-sm" id="guestLinkCopy" style="padding:0.5rem 1rem;">Link kopieren</button>
+                    <button class="btn btn-primary btn-sm" id="guestLinkClose" style="padding:0.5rem 1rem;">Weiter</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        document.getElementById('guestLinkCopy').addEventListener('click', () => {
+            const inp = document.getElementById('guestLinkInput');
+            inp.select();
+            navigator.clipboard.writeText(inp.value).then(() => {
+                document.getElementById('guestLinkCopy').textContent = '✓ Kopiert';
+            }).catch(() => {
+                document.execCommand('copy');
+                document.getElementById('guestLinkCopy').textContent = '✓ Kopiert';
+            });
+        });
+        document.getElementById('guestLinkClose').addEventListener('click', () => {
+            overlay.remove();
+        });
     }
 
     // ── Resolve dog name via key ─────────────────────────────────
@@ -197,6 +290,7 @@
         params.set('name', 'HALTER*IN');
         params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
+        if (guestToken) params.set('token', guestToken);
         window.location.href = 'guest-records.html?' + params;
     }
 
@@ -205,6 +299,7 @@
         params.set('name', 'HALTER*IN');
         params.set('lostDog', resolvedDogRowKey);
         if (guestKey) params.set('key', guestKey);
+        if (guestToken) params.set('token', guestToken);
         window.location.href = 'guest-map.html?' + params;
     }
 
@@ -238,6 +333,7 @@
                 fd.append('longitude', entry.longitude.toString());
                 fd.append('accuracy', entry.accuracy.toString());
                 fd.append('timestamp', entry.timestamp);
+                if (guestToken) fd.append('guestToken', guestToken);
                 fd.append('photo', selectedPhotoBlob, 'photo.jpg');
 
                 const res = await fetch(`${API_BASE}/save-location`, {
@@ -247,10 +343,12 @@
                 });
                 if (!res.ok) throw new Error('Speichern fehlgeschlagen');
             } else {
+                const payload = { ...entry };
+                if (guestToken) payload.guestToken = guestToken;
                 const res = await fetch(`${API_BASE}/save-location`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-                    body: JSON.stringify(entry)
+                    body: JSON.stringify(payload)
                 });
                 if (!res.ok) throw new Error('Speichern fehlgeschlagen');
             }

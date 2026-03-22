@@ -50,6 +50,7 @@ public class SaveLocationFunction
             var contentType = req.ContentType ?? "";
 
             string? comment, category;
+            string? guestToken;
 
             if (contentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
             {
@@ -63,6 +64,7 @@ public class SaveLocationFunction
                 timestamp = form["timestamp"].FirstOrDefault();
                 comment = form["comment"].FirstOrDefault();
                 category = form["category"].FirstOrDefault();
+                guestToken = form["guestToken"].FirstOrDefault();
                 photo = form.Files.GetFile("photo");
             }
             else
@@ -78,6 +80,7 @@ public class SaveLocationFunction
                 timestamp = body?.Timestamp;
                 comment = body?.Comment;
                 category = body?.Category;
+                guestToken = body?.GuestToken;
             }
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(lostDog) ||
@@ -145,6 +148,9 @@ public class SaveLocationFunction
             if (!string.IsNullOrWhiteSpace(category))
                 entity["Category"] = category.Trim();
 
+            if (!string.IsNullOrWhiteSpace(guestToken))
+                entity["GuestToken"] = guestToken.Trim();
+
             // Resolve user location from Users table
             try
             {
@@ -183,5 +189,6 @@ public class SaveLocationFunction
         public string? Timestamp { get; init; }
         public string? Comment { get; init; }
         public string? Category { get; init; }
+        public string? GuestToken { get; init; }
     }
 }
