@@ -43,6 +43,7 @@ jobs:
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/guest-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/field-nav.js
+          sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" sw.js
 
       - name: Deploy to SWA
         uses: Azure/static-web-apps-deploy@v1

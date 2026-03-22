@@ -91,4 +91,40 @@
         if (cfg.imprintUrl) links.push(`<a href="${cfg.imprintUrl}" target="_blank" rel="noopener">Impressum</a>`);
         if (links.length) footer.innerHTML = links.join(' · ');
     }
+
+    // ── Auto SW Update Check ─────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.update();
+        });
+    }
+
+    // ── App Reset (nuke all caches + SW) ─────────────────────────
+    async function resetApp() {
+        try {
+            // 1. Unregister all service workers
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+            }
+            // 2. Delete all caches
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+            // 3. Clear session + config caches
+            sessionStorage.clear();
+            // 4. Hard reload
+            location.reload(true);
+        } catch (e) {
+            console.error('App reset failed:', e);
+            location.reload(true);
+        }
+    }
+
+    // Expose for nav scripts
+    window.FT_THEME = {
+        applySavedTheme,
+        createToggleButton,
+        updateToggleLabel,
+        resetApp
+    };
 })();

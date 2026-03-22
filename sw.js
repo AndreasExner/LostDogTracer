@@ -1,5 +1,5 @@
 // ── LostDogTracer Service Worker ──────────────────────────────────
-const CACHE_NAME = 'lostdogtracer-v1';
+const CACHE_NAME = 'lostdogtracer-%%BUILD_VERSION%%';
 
 const STATIC_ASSETS = [
     '/',

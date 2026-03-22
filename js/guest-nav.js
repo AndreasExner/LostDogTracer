@@ -82,6 +82,20 @@
     versionEl.textContent = '%%BUILD_VERSION%%';
     drawer.appendChild(versionEl);
 
+    // App reset
+    const resetLink = document.createElement('a');
+    resetLink.href = '#';
+    resetLink.style.cssText = 'font-size:0.75rem;color:var(--text-muted);';
+    resetLink.innerHTML = '<span class="nav-icon">🔄</span> App zurücksetzen';
+    resetLink.addEventListener('click', e => {
+        e.preventDefault();
+        if (confirm('App-Cache leeren und neu laden?')) {
+            if (window.FT_THEME) FT_THEME.resetApp();
+            else location.reload(true);
+        }
+    });
+    drawer.appendChild(resetLink);
+
     // Hamburger button
     const btn = document.createElement('button');
     btn.className = 'hamburger-btn';
