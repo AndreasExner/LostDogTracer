@@ -162,7 +162,7 @@ public class AuthFunction
             if (!ok)
                 return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
 
-            _logger.LogInformation("Profile updated for: {User}", username);
+            _logger.LogInformation("Profile updated for: {User}", username?.Replace("\n", "").Replace("\r", ""));
             return new OkObjectResult(new { message = "Profil aktualisiert", displayName = body.DisplayName.Trim() });
         }
         catch (Exception ex)
