@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Dokumentation</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .doc-list { list-style: none; padding: 0; margin: 1.5rem 0; }
+        .doc-list li { margin-bottom: 0.75rem; }
+        .doc-btn {
+            display: block; width: 100%; padding: 1rem 1.25rem;
+            font-size: 1rem; font-weight: 500; text-align: left;
+            background: #fff; border: 1px solid #d2d2d7; border-radius: 12px;
+            color: #1d1d1f; text-decoration: none; cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .doc-btn:hover { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.12); }
+        .doc-btn::before { content: '📄 '; }
+    </style>
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>📖 Dokumentation</h1>
+            <a href="index.html" class="btn-back">Zurück</a>
+        </div>
+        <ul class="doc-list" id="docList">
+            <li style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</li>
+        </ul>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.requireRole(1);
+    </script>
+    <script src="js/theme.js"></script>
+    <script>
+    (async function () {
+        const listEl = document.getElementById('docList');
+        const roleLevel = FT_AUTH.getRoleLevel();
+
+        // Wait for config from theme.js
+        let cfg = window.FT_CONFIG;
+        if (!cfg) {
+            try {
+                const API_BASE = FT_AUTH.getApiBase();
+                const res = await fetch(`${API_BASE}/config`, { headers: FT_AUTH.publicHeaders() });
+                if (res.ok) cfg = await res.json();
+            } catch {}
+        }
+
+        if (!cfg) { listEl.innerHTML = '<li style="color:#ff3b30">Konfiguration konnte nicht geladen werden</li>'; return; }
+
+        const docs = [];
+        if (cfg.doc1Label && cfg.doc1Link) docs.push({ label: cfg.doc1Label, link: cfg.doc1Link, minRole: 1 });
+        if (cfg.doc2Label && cfg.doc2Link) docs.push({ label: cfg.doc2Label, link: cfg.doc2Link, minRole: 1 });
+        if (cfg.doc3Label && cfg.doc3Link) docs.push({ label: cfg.doc3Label, link: cfg.doc3Link, minRole: 4 });
+
+        const visible = docs.filter(d => roleLevel >= d.minRole);
+        if (visible.length === 0) {
+            listEl.innerHTML = '<li style="color:#6e6e73;text-align:center;padding:2rem">Keine Dokumente verfügbar</li>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        visible.forEach(d => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'doc-btn';
+            a.href = d.link;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = d.label;
+            li.appendChild(a);
+            listEl.appendChild(li);
+        });
+    })();
+    </script>
+    <script src="js/nav.js"></script>
+</body>
+</html>

@@ -47,7 +47,13 @@ public class ConfigFunction
                 siteBanner = entity.GetString("SiteBanner") ?? "LostDogTracer",
                 guestCategoryRowKey = entity.GetString("GuestCategoryRowKey") ?? "",
                 privacyUrl = entity.GetString("PrivacyUrl") ?? "",
-                imprintUrl = entity.GetString("ImprintUrl") ?? ""
+                imprintUrl = entity.GetString("ImprintUrl") ?? "",
+                doc1Label = entity.GetString("Doc1Label") ?? "",
+                doc1Link = entity.GetString("Doc1Link") ?? "",
+                doc2Label = entity.GetString("Doc2Label") ?? "",
+                doc2Link = entity.GetString("Doc2Link") ?? "",
+                doc3Label = entity.GetString("Doc3Label") ?? "",
+                doc3Link = entity.GetString("Doc3Link") ?? ""
             });
         }
         catch (Exception ex)
@@ -85,6 +91,12 @@ public class ConfigFunction
                 entity["PrivacyUrl"] = privProp.GetString()?.Trim() ?? "";
             if (body.TryGetProperty("imprintUrl", out var impProp))
                 entity["ImprintUrl"] = impProp.GetString()?.Trim() ?? "";
+            foreach (var docField in new[] { "Doc1Label", "Doc1Link", "Doc2Label", "Doc2Link", "Doc3Label", "Doc3Link" })
+            {
+                var camel = char.ToLowerInvariant(docField[0]) + docField[1..];
+                if (body.TryGetProperty(camel, out var docProp))
+                    entity[docField] = docProp.GetString()?.Trim() ?? "";
+            }
 
             await table.UpsertEntityAsync(entity, TableUpdateMode.Replace);
             _logger.LogInformation("Config updated");
@@ -103,7 +115,13 @@ public class ConfigFunction
         ["SiteBanner"] = "Mein Org Name hier",
         ["GuestCategoryRowKey"] = "001772623834586",
         ["PrivacyUrl"] = "https://mein-impressum-hier.org",
-        ["ImprintUrl"] = "https://mein-impressum-hier.org"
+        ["ImprintUrl"] = "https://mein-impressum-hier.org",
+        ["Doc1Label"] = "Einrichtung und erste Schritte",
+        ["Doc1Link"] = "docs/LostDogTracer-1-Einrichtung_und_erste_Schritte.pdf",
+        ["Doc2Label"] = "Benutzer Handbuch",
+        ["Doc2Link"] = "docs/LostDogTracer-2-Benutzer_Handbuch.pdf",
+        ["Doc3Label"] = "Admin Handbuch",
+        ["Doc3Link"] = "docs/LostDogTracer-3-Admin_Handbuch.pdf"
     };
 
     private async Task<TableEntity> GetOrSeedConfigAsync()

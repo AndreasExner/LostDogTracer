@@ -32,8 +32,7 @@
         .login-box .btn { width: 100%; padding: 0.85rem; font-size: 1rem; }
         .login-error { color: #ff3b30; font-size: 0.875rem; text-align: center; margin-top: 0.5rem; display: none; }
         .admin-header .logout-btn {
-            margin-left: auto; font-size: 0.875rem; color: #ff3b30;
-            background: none; border: none; cursor: pointer; text-decoration: underline;
+            display: none;
         }
         .hidden { display: none !important; }
     </style>
@@ -66,7 +65,6 @@
         <div class="admin-header">
             <img src="gfx/lostdogtracer-logo-100w.png" alt="LostDogTracer Logo" style="width:100px;height:auto;border-radius:10px;flex-shrink:0;">
             <h1>Übersicht</h1>
-            <button class="logout-btn" id="logoutBtn">Abmelden</button>
         </div>
 
         <div class="menu-grid">
@@ -117,7 +115,6 @@
         const loginUser = document.getElementById('loginUser');
         const loginPass = document.getElementById('loginPass');
         const loginError = document.getElementById('loginError');
-        const logoutBtn = document.getElementById('logoutBtn');
 
         // Check if already logged in
         FT_AUTH.isLoggedIn().then(valid => {
@@ -127,15 +124,6 @@
         loginBtn.addEventListener('click', doLogin);
         loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
         loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') loginPass.focus(); });
-
-        logoutBtn.addEventListener('click', () => {
-            FT_AUTH.logout();
-            menuSection.classList.add('hidden');
-            loginSection.classList.remove('hidden');
-            loginError.style.display = 'none';
-            loginUser.value = '';
-            loginPass.value = '';
-        });
 
         async function doLogin() {
             loginBtn.disabled = true;

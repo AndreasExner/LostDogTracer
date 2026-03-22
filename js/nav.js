@@ -2,7 +2,7 @@
 (function () {
     // Inject on sub-pages and index.html menu page
     const path = location.pathname;
-    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|backup|profile)\.html$/i.test(path);
+    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|backup|profile|docs)\.html$/i.test(path);
     const isHome = /index\.html$/i.test(path) || path === '/' || path.endsWith('/');
     if (!isSubPage && !isHome) return;
 
@@ -14,6 +14,7 @@
         { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 3 },
         { href: 'backup.html',     icon: '🔧', label: 'Wartung', minRole: 4 },
         { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
+        { href: 'docs.html',       icon: '📖', label: 'Dokumentation', minRole: 1 },
     ];
 
     const roleLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
