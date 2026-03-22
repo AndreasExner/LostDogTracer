@@ -642,9 +642,14 @@
     entryCategoryEl.addEventListener('change', updateSaveBtn);
     saveEntryBtn.addEventListener('click', saveEntry);
 
-    // Load dropdowns lazily when panel opens
+    // Load dropdowns lazily when panel opens, hide table on mobile
     addressPanel.addEventListener('toggle', () => {
-        if (addressPanel.open) loadEntryDropdowns();
+        if (addressPanel.open) {
+            loadEntryDropdowns();
+            document.getElementById('tableSection').style.display = 'none';
+        } else {
+            document.getElementById('tableSection').style.display = '';
+        }
     });
 
     // ── Init ─────────────────────────────────────────────────────

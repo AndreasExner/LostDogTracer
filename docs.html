@@ -71,9 +71,27 @@
             const a = document.createElement('a');
             a.className = 'doc-btn';
             a.href = d.link;
-            a.target = '_blank';
-            a.rel = 'noopener';
             a.textContent = d.label;
+            // Force external browser on iOS PWA (standalone mode)
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const url = new URL(d.link, location.href).href;
+                if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+                    // iOS PWA: open in Safari via a temporary link trick
+                    const tmp = document.createElement('a');
+                    tmp.href = url;
+                    tmp.target = '_blank';
+                    tmp.rel = 'noopener noreferrer';
+                    tmp.setAttribute('onclick', '');
+                    document.body.appendChild(tmp);
+                    tmp.click();
+                    document.body.removeChild(tmp);
+                    // Fallback: if still stuck, use location
+                    setTimeout(() => { window.open(url, '_system') || (location.href = url); }, 300);
+                } else {
+                    window.open(url, '_blank', 'noopener');
+                }
+            });
             li.appendChild(a);
             listEl.appendChild(li);
         });
