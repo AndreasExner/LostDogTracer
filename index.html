@@ -144,7 +144,8 @@
 
             const token = await FT_AUTH.login(loginUser.value, loginPass.value);
             if (token) {
-                showMenu();
+                // Reload page so nav.js picks up the new role
+                location.reload();
             } else {
                 loginError.style.display = 'block';
             }
