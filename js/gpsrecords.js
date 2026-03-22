@@ -624,6 +624,9 @@
             if (miniMarker) { miniMarker.remove(); miniMarker = null; }
             updateSaveBtn();
 
+            // Close panel and show table
+            addressPanel.open = false;
+
             // Reload table to show new entry
             await loadRecords();
         } catch {
@@ -643,12 +646,24 @@
     saveEntryBtn.addEventListener('click', saveEntry);
 
     // Load dropdowns lazily when panel opens, hide table on mobile
+    const backBtn = document.getElementById('backBtn');
     addressPanel.addEventListener('toggle', () => {
         if (addressPanel.open) {
             loadEntryDropdowns();
             document.getElementById('tableSection').style.display = 'none';
+            // Replace "Zurück" with "Schließen"
+            backBtn.textContent = 'Schließen';
+            backBtn.href = '#';
+            backBtn.onclick = e => {
+                e.preventDefault();
+                addressPanel.open = false;
+            };
         } else {
             document.getElementById('tableSection').style.display = '';
+            // Restore "Zurück"
+            backBtn.textContent = 'Zurück';
+            backBtn.href = 'index.html';
+            backBtn.onclick = null;
         }
     });
 
