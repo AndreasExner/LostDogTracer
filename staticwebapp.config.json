@@ -7,6 +7,12 @@
         {
             "route": "/api/*",
             "allowedRoles": ["anonymous"]
+        },
+        {
+            "route": "/docs/*.pdf",
+            "headers": {
+                "Content-Disposition": "attachment"
+            }
         }
     ],
     "responseOverrides": {
