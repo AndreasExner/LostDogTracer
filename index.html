@@ -54,7 +54,10 @@
             />
             <h2>🔐 Anmeldung</h2>
             <input type="text" id="loginUser" placeholder="Benutzername" autocomplete="username">
-            <input type="password" id="loginPass" placeholder="Kennwort" autocomplete="current-password">
+            <div class="pw-wrap">
+                <input type="password" id="loginPass" placeholder="Kennwort" autocomplete="current-password">
+                <button type="button" class="pw-toggle" tabindex="-1">&#x1F441;</button>
+            </div>
             <button class="btn btn-primary" id="loginBtn">Anmelden</button>
             <p class="login-error" id="loginError">Benutzername oder Kennwort falsch</p>
         </div>

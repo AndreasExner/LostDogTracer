@@ -100,3 +100,13 @@ const FT_AUTH = (function () {
 
     return { publicHeaders, adminHeaders, login, isLoggedIn, logout, sessionExpired, getApiBase, getRole, getRoleLevel, requireRole };
 })();
+
+/* ── Password visibility toggle (delegated) ──────────────────── */
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.pw-toggle');
+    if (!btn) return;
+    const input = btn.parentElement.querySelector('input');
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '\u{1F441}' : '\u{1F441}\u200D\u{1F5E8}';
+});

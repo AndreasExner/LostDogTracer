@@ -76,6 +76,15 @@
 .toast.error { background: var(--danger); }
 .toast.hidden { opacity: 0; pointer-events: none; }
 
+/* ── Password toggle ─────────────────────────────────────────── */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 2.75rem; }
+.pw-toggle {
+    position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; font-size: 1.125rem;
+    color: var(--text-secondary); padding: 0.25rem; line-height: 1;
+}
+
 /* ── Hamburger button ────────────────────────────────────────── */
 .hamburger-btn {
     position: fixed;
