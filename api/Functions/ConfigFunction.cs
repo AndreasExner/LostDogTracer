@@ -114,8 +114,8 @@ public class ConfigFunction
     {
         ["SiteBanner"] = "Mein Org Name hier",
         ["GuestCategoryRowKey"] = "001772623834586",
-        ["PrivacyUrl"] = "https://mein-impressum-hier.org",
-        ["ImprintUrl"] = "https://mein-impressum-hier.org",
+        ["PrivacyUrl"] = "docs/datenschutz.html",
+        ["ImprintUrl"] = "docs/impressum.html",
         ["Doc1Label"] = "Einrichtung und erste Schritte",
         ["Doc1Link"] = "docs/LostDogTracer-1-Einrichtung_und_erste_Schritte.pdf",
         ["Doc2Label"] = "Benutzer Handbuch",

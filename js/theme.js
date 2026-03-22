@@ -87,8 +87,8 @@
         const footer = document.querySelector('.legal-footer');
         if (!footer) return;
         const links = [];
-        if (cfg.privacyUrl) links.push(`<a href="${cfg.privacyUrl}" target="_blank" rel="noopener">Datenschutz</a>`);
-        if (cfg.imprintUrl) links.push(`<a href="${cfg.imprintUrl}" target="_blank" rel="noopener">Impressum</a>`);
+        if (cfg.privacyUrl) links.push(`<a href="${cfg.privacyUrl}">Datenschutz</a>`);
+        if (cfg.imprintUrl) links.push(`<a href="${cfg.imprintUrl}">Impressum</a>`);
         if (links.length) footer.innerHTML = links.join(' · ');
     }
 

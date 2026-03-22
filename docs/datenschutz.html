@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LostDogTracer – Datenschutzerklärung</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.7; color: #1d1d1f; max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; }
+        h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.25rem; margin-top: 2rem; border-bottom: 1px solid #e8e8ed; padding-bottom: 0.5rem; }
+        h3 { font-size: 1.05rem; margin-top: 1.25rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        th, td { border: 1px solid #d2d2d7; padding: 0.5rem 0.75rem; text-align: left; }
+        th { background: #f5f5f7; }
+        .meta { color: #6e6e73; font-size: 0.875rem; margin-bottom: 2rem; }
+        ul { padding-left: 1.5rem; }
+        a { color: #0071e3; }
+    </style>
+</head>
+<body>
+
+<h1>Datenschutzerklärung</h1>
+<p class="meta">LostDogTracer – Support App für die Suche vermisster Hunde<br>Stand: März 2026</p>
+
+<h2>1. Verantwortlicher</h2>
+<p>
+    <strong>[Name des Vereins / der Organisation]</strong><br>
+    [Straße und Hausnummer]<br>
+    [PLZ Ort]<br>
+    E-Mail: [E-Mail-Adresse]<br>
+    Telefon: [Telefonnummer]
+</p>
+<p><em>Bitte ersetzen Sie die Platzhalter durch die tatsächlichen Angaben des Verantwortlichen gemäß Art. 4 Nr. 7 DSGVO.</em></p>
+
+<h2>2. Überblick über die Datenverarbeitung</h2>
+<p>LostDogTracer ist eine Progressive Web App (PWA), die bei der Suche nach vermissten Hunden eingesetzt wird. Die App erfasst GPS-Standortdaten, um Suchaktivitäten zu dokumentieren und auf einer Karte darzustellen.</p>
+
+<h2>3. Welche Daten werden verarbeitet?</h2>
+
+<h3>3.1 GPS-Standortdaten</h3>
+<table>
+    <tr><th>Datum</th><th>Zweck</th><th>Rechtsgrundlage</th></tr>
+    <tr><td>Breitengrad, Längengrad</td><td>Dokumentation des Suchstandorts</td><td>Art. 6 Abs. 1 lit. a DSGVO (Einwilligung)</td></tr>
+    <tr><td>GPS-Genauigkeit</td><td>Qualitätsbewertung der Position</td><td>Art. 6 Abs. 1 lit. a DSGVO</td></tr>
+    <tr><td>Zeitstempel</td><td>Zeitliche Zuordnung</td><td>Art. 6 Abs. 1 lit. a DSGVO</td></tr>
+    <tr><td>Kategorie, Kommentar</td><td>Klassifizierung der Beobachtung</td><td>Art. 6 Abs. 1 lit. a DSGVO</td></tr>
+</table>
+<p>Die GPS-Erfassung erfolgt <strong>ausschließlich nach aktiver Betätigung</strong> des „Standort speichern"-Buttons. Es findet <strong>kein automatisches oder kontinuierliches Tracking</strong> im Hintergrund statt.</p>
+
+<h3>3.2 Fotos</h3>
+<p>Optional können Fotos zu einem GPS-Eintrag hinzugefügt werden. Fotos werden im Azure Blob Storage gespeichert. Metadaten (EXIF) werden <strong>nicht</strong> serverseitig ausgelesen, können aber im Originalbild enthalten sein.</p>
+
+<h3>3.3 Benutzerkonto</h3>
+<table>
+    <tr><th>Datum</th><th>Zweck</th><th>Rechtsgrundlage</th></tr>
+    <tr><td>Benutzername</td><td>Identifikation und Zuordnung der Einträge</td><td>Art. 6 Abs. 1 lit. b DSGVO (Vertragsdurchführung)</td></tr>
+    <tr><td>Anzeigename</td><td>Darstellung in der App</td><td>Art. 6 Abs. 1 lit. b DSGVO</td></tr>
+    <tr><td>Passwort (gehasht)</td><td>Authentifizierung</td><td>Art. 6 Abs. 1 lit. b DSGVO</td></tr>
+    <tr><td>Rolle</td><td>Zugriffssteuerung</td><td>Art. 6 Abs. 1 lit. b DSGVO</td></tr>
+    <tr><td>Letzter Login (Zeitstempel)</td><td>Sicherheitsüberwachung</td><td>Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)</td></tr>
+</table>
+
+<h3>3.4 Gast-Zugang</h3>
+<p>Gäste können über einen Link ohne Registrierung Standorte erfassen. Es wird <strong>kein Benutzerkonto</strong> erstellt. Der Eintrag wird unter dem festen Bezeichner „HALTER*IN" gespeichert.</p>
+
+<h3>3.5 Technische Daten</h3>
+<p>Die App verwendet <strong>keine Cookies</strong>. Folgende lokale Speichermechanismen werden genutzt:</p>
+<ul>
+    <li><strong>sessionStorage</strong>: Authentifizierungs-Token (wird beim Schließen des Tabs gelöscht)</li>
+    <li><strong>localStorage</strong>: Theme-Präferenz (Dark/Light Mode), letzte Dropdown-Auswahlen</li>
+    <li><strong>IndexedDB</strong>: Offline-Warteschlange für GPS-Einträge (bis zur Übertragung)</li>
+</ul>
+<p>Diese Daten verbleiben <strong>ausschließlich auf dem Gerät</strong> des Nutzers und werden nicht an Server übertragen (außer die GPS-Einträge bei der Synchronisation).</p>
+
+<h2>4. Wo werden die Daten gespeichert?</h2>
+<p>Alle Daten werden in <strong>Microsoft Azure</strong> gespeichert:</p>
+<ul>
+    <li><strong>Azure Table Storage</strong>: GPS-Einträge, Benutzerkonten, Konfiguration</li>
+    <li><strong>Azure Blob Storage</strong>: Hochgeladene Fotos</li>
+    <li><strong>Rechenzentrumsregion</strong>: [Azure Region eintragen, z.B. „West Europe (Niederlande)"]</li>
+</ul>
+<p>Microsoft Azure unterliegt den <a href="https://privacy.microsoft.com/de-de/privacystatement" target="_blank" rel="noopener">Microsoft Datenschutzbestimmungen</a> und ist nach ISO 27001, SOC 2 und weiteren Standards zertifiziert. Eine Datenübertragung in Drittländer findet nicht statt, sofern die Azure-Region innerhalb der EU liegt.</p>
+
+<h2>5. Externe Dienste</h2>
+
+<h3>5.1 OpenStreetMap / Nominatim</h3>
+<p>Die Kartenanzeige nutzt <strong>OpenStreetMap</strong> Kartenkacheln. Die Adresssuche verwendet den <strong>Nominatim</strong>-Geocoding-Dienst. Dabei wird die eingegebene Adresse an die OpenStreetMap-Server übermittelt. Es gelten die <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener">OSM Privacy Policy</a>.</p>
+
+<h3>5.2 Kartenkachel-Anbieter</h3>
+<p>Neben OpenStreetMap können folgende Kartendienste verwendet werden:</p>
+<ul>
+    <li>OpenTopoMap</li>
+    <li>CARTO (Positron / Dark Matter)</li>
+    <li>Esri Satellite (ArcGIS)</li>
+</ul>
+<p>Beim Laden der Kartenkacheln wird die <strong>IP-Adresse</strong> des Nutzers an den jeweiligen Anbieter übermittelt.</p>
+
+<h3>5.3 Leaflet</h3>
+<p>Die Kartenbibliothek <strong>Leaflet</strong> wird über ein CDN (unpkg.com) eingebunden. Beim Laden wird die IP-Adresse des Nutzers an den CDN-Anbieter übermittelt.</p>
+
+<h2>6. Speicherdauer</h2>
+<table>
+    <tr><th>Daten</th><th>Speicherdauer</th></tr>
+    <tr><td>GPS-Einträge</td><td>Bis zur manuellen Löschung durch den Nutzer oder einen Administrator</td></tr>
+    <tr><td>Fotos</td><td>Bis zur manuellen Löschung</td></tr>
+    <tr><td>Benutzerkonten</td><td>Bis zur Löschung durch einen Administrator</td></tr>
+    <tr><td>Auth-Token (sessionStorage)</td><td>Maximal 24 Stunden, spätestens beim Schließen des Tabs</td></tr>
+    <tr><td>Offline-Queue (IndexedDB)</td><td>Bis zur erfolgreichen Übertragung an den Server</td></tr>
+</table>
+
+<h2>7. Ihre Rechte</h2>
+<p>Sie haben gemäß DSGVO folgende Rechte:</p>
+<ul>
+    <li><strong>Auskunft</strong> (Art. 15): Welche Daten über Sie gespeichert sind</li>
+    <li><strong>Berichtigung</strong> (Art. 16): Korrektur unrichtiger Daten</li>
+    <li><strong>Löschung</strong> (Art. 17): Löschung Ihrer Daten („Recht auf Vergessenwerden")</li>
+    <li><strong>Einschränkung</strong> (Art. 18): Einschränkung der Verarbeitung</li>
+    <li><strong>Datenübertragbarkeit</strong> (Art. 20): Erhalt Ihrer Daten in einem gängigen Format</li>
+    <li><strong>Widerspruch</strong> (Art. 21): Widerspruch gegen die Verarbeitung</li>
+    <li><strong>Widerruf der Einwilligung</strong> (Art. 7 Abs. 3): Jederzeit mit Wirkung für die Zukunft</li>
+</ul>
+<p>Zur Ausübung Ihrer Rechte wenden Sie sich bitte an den oben genannten Verantwortlichen.</p>
+<p>Sie haben zudem das Recht, sich bei einer <strong>Datenschutz-Aufsichtsbehörde</strong> zu beschweren (Art. 77 DSGVO).</p>
+
+<h2>8. Datensicherheit</h2>
+<p>Die App setzt folgende technische und organisatorische Maßnahmen ein:</p>
+<ul>
+    <li><strong>Verschlüsselung</strong>: Alle Datenübertragungen erfolgen über HTTPS/TLS</li>
+    <li><strong>Passwort-Hashing</strong>: Passwörter werden mit PBKDF2 (SHA-256, 100.000 Iterationen, individuelles Salt) gehasht und nie im Klartext gespeichert</li>
+    <li><strong>API-Key</strong>: Alle API-Endpunkte sind durch einen API-Schlüssel geschützt</li>
+    <li><strong>Rate-Limiting</strong>: Schutz gegen Brute-Force-Angriffe (Auth: 10 Versuche/Minute pro IP)</li>
+    <li><strong>Rollenbasierte Zugriffskontrolle</strong>: Vier Berechtigungsstufen (User, PowerUser, Manager, Administrator)</li>
+    <li><strong>Keine Cookies</strong>: Authentifizierung über kurzlebige, HMAC-signierte Tokens</li>
+</ul>
+
+<h2>9. Änderungen dieser Datenschutzerklärung</h2>
+<p>Diese Datenschutzerklärung kann bei Bedarf aktualisiert werden. Die aktuelle Version ist stets über die App abrufbar. Bei wesentlichen Änderungen werden die Nutzer in geeigneter Form informiert.</p>
+
+<div style="text-align:center;margin:3rem 0 1rem;">
+    <a href="../index.html" style="display:inline-block;padding:0.85rem 2rem;background:#0071e3;color:#fff;border-radius:10px;text-decoration:none;font-weight:500;font-size:1rem;">← Zurück zur App</a>
+</div>
+
+</body>
+</html>
