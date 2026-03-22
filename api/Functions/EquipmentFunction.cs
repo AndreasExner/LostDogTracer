@@ -42,6 +42,11 @@ public class EquipmentFunction
                 return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
             if (await _adminAuth.ValidateTokenWithRole(req, 2) == 0)
                 return AdminAuth.Forbidden();
+
+            var table = _tableService.GetTableClient(TableName);
+            await table.CreateIfNotExistsAsync();
+
+            var items = new List<object>();
             await foreach (var entity in table.QueryAsync<TableEntity>(
                 filter: $"PartitionKey eq '{PK}'"))
             {
