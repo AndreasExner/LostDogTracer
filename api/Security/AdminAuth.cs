@@ -169,6 +169,9 @@ public class AdminAuth
                 username = entity.RowKey,
                 displayName = entity.GetString("DisplayName") ?? entity.RowKey,
                 role = entity.GetString("Role") ?? "User",
+                location = entity.GetString("Location") ?? "",
+                latitude = entity.GetDouble("Latitude"),
+                longitude = entity.GetDouble("Longitude"),
                 createdAt = entity.GetString("CreatedAt") ?? "",
                 lastLogin = entity.GetString("LastLogin") ?? ""
             });
@@ -269,8 +272,9 @@ public class AdminAuth
         }
     }
 
-    /// <summary>Update role and/or displayName for a user (admin action).</summary>
-    public async Task<bool> UpdateUserAsync(string username, string? displayName, string? role)
+    /// <summary>Update role, displayName, and/or location for a user (admin action).</summary>
+    public async Task<bool> UpdateUserAsync(string username, string? displayName, string? role,
+        string? location = null, double? latitude = null, double? longitude = null)
     {
         var table = _tableService.GetTableClient(TableName);
         var key = username.ToLowerInvariant();
@@ -288,6 +292,12 @@ public class AdminAuth
                     role = "User";
                 patch["Role"] = role;
             }
+            if (location is not null)
+                patch["Location"] = location.Trim();
+            if (latitude.HasValue)
+                patch["Latitude"] = latitude.Value;
+            if (longitude.HasValue)
+                patch["Longitude"] = longitude.Value;
             await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
             return true;
         }

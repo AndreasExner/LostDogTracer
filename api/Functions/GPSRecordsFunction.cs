@@ -110,6 +110,7 @@ public class GPSRecordsFunction
                     recordedAt = entity.GetString("RecordedAt") ?? entity.Timestamp?.ToString("o") ?? "",
                     photoUrl = entity.GetString("PhotoUrl") ?? "",
                     comment = entity.GetString("Comment") ?? "",
+                    location = entity.GetString("Location") ?? "",
                     categoryKey,
                     category = catLookup.GetValueOrDefault(categoryKey, categoryKey)
                 });
@@ -389,6 +390,7 @@ public class GPSRecordsFunction
         public string? LostDog { get; init; }
         public string? Category { get; init; }
         public string? Comment { get; init; }
+        public string? Location { get; init; }
         public string? RecordedAt { get; init; }
         public bool DeletePhoto { get; init; }
         public double? Latitude { get; init; }
@@ -441,6 +443,8 @@ public class GPSRecordsFunction
                         entity["Category"] = body.Category;
                     if (body.Comment is not null) // allow empty string to clear
                         entity["Comment"] = body.Comment.Length > 40 ? body.Comment[..40] : body.Comment;
+                    if (body.Location is not null)
+                        entity["Location"] = body.Location;
                     if (!string.IsNullOrEmpty(body.RecordedAt))
                         entity["RecordedAt"] = body.RecordedAt;
                     if (body.Latitude.HasValue)

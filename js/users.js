@@ -71,14 +71,15 @@
             const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—';
             const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('de-DE') : 'Nie';
             const role = u.role || 'User';
-            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}')">Bearbeiten</button>` : '';
+            const loc = u.location ? ` · 📍 ${esc(u.location)}` : '';
+            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}','${esc(u.location || '')}',${u.latitude || 0},${u.longitude || 0})">Bearbeiten</button>` : '';
             const pwBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort</button>` : '';
             const delBtn = (isAdmin && !isSelf) ? `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>` : '';
             return `
             <div class="user-card">
                 <div class="user-info">
                     <strong>${esc(u.displayName || u.username)}</strong>
-                    <small>@${esc(u.username)} · ${esc(role)} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
+                    <small>@${esc(u.username)} · ${esc(role)}${loc} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
                 </div>
                 <div class="user-actions">
                     ${editBtn}${pwBtn}${delBtn}
@@ -94,6 +95,9 @@
         document.getElementById('newUsername').value = '';
         document.getElementById('newDisplayName').value = '';
         document.getElementById('newUserPw').value = '';
+        document.getElementById('newUserLocation').value = '';
+        document.getElementById('newUserLat').value = '';
+        document.getElementById('newUserLng').value = '';
         // Manager: hide role dropdown (can only assign "User")
         const roleSelect = document.getElementById('newUserRole');
         if (FT_AUTH.getRoleLevel() < 4) {
@@ -117,7 +121,13 @@
         const res = await apiCall(`${API}/manage/users`, {
             method: 'POST',
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, displayName: displayName || username, password, role: document.getElementById('newUserRole').value })
+            body: JSON.stringify({
+                username, displayName: displayName || username, password,
+                role: document.getElementById('newUserRole').value,
+                location: document.getElementById('newUserLocation').value.trim() || null,
+                latitude: parseFloat(document.getElementById('newUserLat').value) || null,
+                longitude: parseFloat(document.getElementById('newUserLng').value) || null
+            })
         });
         if (!res) return;
         if (res.ok) {
@@ -179,11 +189,14 @@
     };
     /* ── Edit user (role + displayName) ─────── */
     let editTarget = '';
-    AdminUsers.editUser = function (username, displayName, role) {
+    AdminUsers.editUser = function (username, displayName, role, location, lat, lng) {
         editTarget = username;
         document.getElementById('editUserName').textContent = username;
         document.getElementById('editDisplayName').value = displayName;
         document.getElementById('editUserRole').value = role;
+        document.getElementById('editUserLocation').value = location || '';
+        document.getElementById('editUserLat').value = lat || '';
+        document.getElementById('editUserLng').value = lng || '';
         hideError('editUserError');
         openModal(editUserModal);
     };
@@ -196,7 +209,12 @@
         const res = await apiCall(`${API}/manage/users/${encodeURIComponent(editTarget)}`, {
             method: 'PUT',
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ displayName, role })
+            body: JSON.stringify({
+                displayName, role,
+                location: document.getElementById('editUserLocation').value.trim() || null,
+                latitude: parseFloat(document.getElementById('editUserLat').value) || null,
+                longitude: parseFloat(document.getElementById('editUserLng').value) || null
+            })
         });
         if (!res) return;
         if (res.ok) {
@@ -210,4 +228,24 @@
     });
     /* ── Init ────────────────────────────────── */
     loadCurrentUser().then(() => loadUsers());
-})();
+    /* ── Location search (Nominatim, city-level) ── */
+    async function searchLocation(inputId, latId, lngId) {
+        const input = document.getElementById(inputId);
+        const q = input.value.trim();
+        if (q.length < 2) { showToast('Mindestens 2 Zeichen', false); return; }
+        try {
+            const params = new URLSearchParams({ q, format: 'json', addressdetails: '1', countrycodes: 'de,nl', limit: '5', featuretype: 'city' });
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { headers: { 'Accept-Language': 'de' } });
+            const results = await res.json();
+            if (results.length === 0) { showToast('Kein Ort gefunden', false); return; }
+            const r = results[0];
+            const city = r.address?.city || r.address?.town || r.address?.village || r.address?.municipality || r.display_name.split(',')[0];
+            input.value = city;
+            document.getElementById(latId).value = r.lat;
+            document.getElementById(lngId).value = r.lon;
+            showToast(`📍 ${city}`);
+        } catch { showToast('Fehler bei der Ortssuche', false); }
+    }
+
+    document.getElementById('newUserLocationSearch').addEventListener('click', () => searchLocation('newUserLocation', 'newUserLat', 'newUserLng'));
+    document.getElementById('editUserLocationSearch').addEventListener('click', () => searchLocation('editUserLocation', 'editUserLat', 'editUserLng'));})();

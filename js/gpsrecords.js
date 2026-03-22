@@ -122,7 +122,7 @@
         selectAllEl.checked = false;
 
         if (data.records.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
             return;
         }
 
@@ -136,6 +136,7 @@
                 <td>${esc(r.name)}</td>
                 <td>${esc(r.lostDog)}</td>
                 <td>${formatDate(r.recordedAt)}</td>
+                <td>${esc(r.location || '')}</td>
                 <td>${esc(r.category || '')}</td>
                 <td>${esc(r.comment || '')}</td>
                 ${photoCell}`;
@@ -676,6 +677,7 @@
     const editDogEl = document.getElementById('editDog');
     const editCategoryEl = document.getElementById('editCategory');
     const editCommentEl = document.getElementById('editComment');
+    const editLocationEl = document.getElementById('editLocation');
     const editRecordedAtEl = document.getElementById('editRecordedAt');
     const editDeletePhotoEl = document.getElementById('editDeletePhoto');
     const editPhotoRow = document.getElementById('editPhotoRow');
@@ -721,6 +723,7 @@
         editDogEl.value = '';
         editCategoryEl.value = '';
         editCommentEl.value = '';
+        editLocationEl.value = '';
         editRecordedAtEl.value = '';
         editDeletePhotoEl.checked = false;
         editLatitudeEl.value = '';
@@ -745,6 +748,7 @@
                 editDogEl.value = rec.lostDogKey || rec.lostDog || '';
                 editCategoryEl.value = rec.categoryKey || rec.category || '';
                 editCommentEl.value = rec.comment || '';
+                editLocationEl.value = rec.location || '';
                 editLatitudeEl.value = rec.latitude.toFixed(6);
                 editLongitudeEl.value = rec.longitude.toFixed(6);
                 editAccuracyEl.value = rec.accuracy.toFixed(1) + ' m';
@@ -793,6 +797,7 @@
             payload.lostDog = editDogEl.value || undefined;
             payload.category = editCategoryEl.value; // allow empty to clear
             payload.comment = editCommentEl.value;     // allow empty to clear
+            payload.location = editLocationEl.value;   // allow empty to clear
             if (editRecordedAtEl.value) {
                 payload.recordedAt = new Date(editRecordedAtEl.value).toISOString();
             }
@@ -801,6 +806,7 @@
             if (editDogEl.value) payload.lostDog = editDogEl.value;
             if (editCategoryEl.value) payload.category = editCategoryEl.value;
             if (editCommentEl.value) payload.comment = editCommentEl.value;
+            if (editLocationEl.value) payload.location = editLocationEl.value;
         }
 
         editSaveBtn.disabled = true;

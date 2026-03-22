@@ -165,6 +165,9 @@ public class UsersFunction
         public string? DisplayName { get; init; }
         public string? Password { get; init; }
         public string? Role { get; init; }
+        public string? Location { get; init; }
+        public double? Latitude { get; init; }
+        public double? Longitude { get; init; }
     }
 
     private record ResetPasswordRequest
@@ -176,6 +179,9 @@ public class UsersFunction
     {
         public string? DisplayName { get; init; }
         public string? Role { get; init; }
+        public string? Location { get; init; }
+        public double? Latitude { get; init; }
+        public double? Longitude { get; init; }
     }
 
     [Function("UpdateUser")]
@@ -199,7 +205,8 @@ public class UsersFunction
             if (body is null || (string.IsNullOrWhiteSpace(body.DisplayName) && string.IsNullOrWhiteSpace(body.Role)))
                 return new BadRequestObjectResult(new { error = "Anzeigename oder Rolle erforderlich" });
 
-            var ok = await _auth.UpdateUserAsync(username, body.DisplayName, body.Role);
+            var ok = await _auth.UpdateUserAsync(username, body.DisplayName, body.Role,
+                body.Location, body.Latitude, body.Longitude);
             if (!ok)
                 return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
 
