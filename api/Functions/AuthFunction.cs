@@ -133,6 +133,9 @@ public class AuthFunction
     private record UpdateProfileRequest
     {
         public string? DisplayName { get; init; }
+        public string? Location { get; init; }
+        public double? Latitude { get; init; }
+        public double? Longitude { get; init; }
     }
 
     [Function("UpdateProfile")]
@@ -155,15 +158,31 @@ public class AuthFunction
             var body = await JsonSerializer.DeserializeAsync<UpdateProfileRequest>(req.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (body is null || string.IsNullOrWhiteSpace(body.DisplayName))
-                return new BadRequestObjectResult(new { error = "Anzeigename erforderlich" });
+            if (body is null)
+                return new BadRequestObjectResult(new { error = "Keine Daten" });
 
-            var ok = await _auth.UpdateDisplayNameAsync(username, body.DisplayName);
-            if (!ok)
-                return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
+            bool updated = false;
+
+            if (!string.IsNullOrWhiteSpace(body.DisplayName))
+            {
+                var ok = await _auth.UpdateDisplayNameAsync(username, body.DisplayName);
+                if (!ok) return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
+                updated = true;
+            }
+
+            if (body.Location is not null)
+            {
+                var ok = await _auth.UpdateUserAsync(username, null, null,
+                    body.Location, body.Latitude, body.Longitude);
+                if (!ok) return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
+                updated = true;
+            }
+
+            if (!updated)
+                return new BadRequestObjectResult(new { error = "Keine Änderungen" });
 
             _logger.LogInformation("Profile updated for: {User}", username?.Replace("\n", "").Replace("\r", ""));
-            return new OkObjectResult(new { message = "Profil aktualisiert", displayName = body.DisplayName.Trim() });
+            return new OkObjectResult(new { message = "Profil aktualisiert" });
         }
         catch (Exception ex)
         {

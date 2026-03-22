@@ -9,10 +9,10 @@
     const pages = [
         { href: 'field-home.html', icon: '🚩', label: 'Erfassen', minRole: 1 },
         { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten', minRole: 2 },
+        { href: 'equipment.html',  icon: '📦', label: 'Equipment', minRole: 3 },
         { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', minRole: 3 },
         { href: 'categories.html', icon: '🏷️', label: 'Kategorien', minRole: 4 },
         { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 3 },
-        { href: 'equipment.html',  icon: '📦', label: 'Equipment', minRole: 3 },
         { href: 'backup.html',     icon: '🔧', label: 'Wartung', minRole: 4 },
         { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
         { href: 'docs.html',       icon: '📖', label: 'Dokumentation', minRole: 1 },

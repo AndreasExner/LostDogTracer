@@ -58,12 +58,7 @@
         <div class="modal">
             <h3>Neues Equipment</h3>
             <input type="text" id="newEqName" placeholder="Bezeichnung" autocomplete="off">
-            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
-                <input type="text" id="newEqLocation" placeholder="Ort (optional)" autocomplete="off" style="flex:1;">
-                <button type="button" class="btn btn-secondary btn-sm" id="newEqLocationSearch">🔍</button>
-            </div>
-            <input type="hidden" id="newEqLat">
-            <input type="hidden" id="newEqLng">
+            <input type="text" id="newEqComment" placeholder="Kommentar (optional)" autocomplete="off" maxlength="100">
             <p class="modal-error" id="createEqError"></p>
             <div class="modal-buttons">
                 <button class="btn btn-secondary btn-sm" id="createEqCancel">Abbrechen</button>
@@ -77,6 +72,7 @@
         <div class="modal">
             <h3>Equipment bearbeiten</h3>
             <input type="text" id="editEqName" placeholder="Bezeichnung" autocomplete="off">
+            <input type="text" id="editEqComment" placeholder="Kommentar (optional)" autocomplete="off" maxlength="100">
             <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
                 <input type="text" id="editEqLocation" placeholder="Ort (optional)" autocomplete="off" style="flex:1;">
                 <button type="button" class="btn btn-secondary btn-sm" id="editEqLocationSearch">🔍</button>

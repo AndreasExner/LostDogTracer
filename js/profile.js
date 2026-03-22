@@ -27,7 +27,12 @@
             if (usersRes.ok) {
                 const users = await usersRes.json();
                 const me = users.find(u => u.username === data.username);
-                if (me) document.getElementById('profileDisplayName').value = me.displayName || '';
+                if (me) {
+                    document.getElementById('profileDisplayName').value = me.displayName || '';
+                    document.getElementById('profileLocation').value = me.location || '';
+                    if (me.latitude) document.getElementById('profileLat').value = me.latitude;
+                    if (me.longitude) document.getElementById('profileLng').value = me.longitude;
+                }
             }
         } catch {
             showToast('Profil konnte nicht geladen werden', false);
@@ -94,6 +99,53 @@
         } finally {
             btn.disabled = false;
         }
+    });
+
+    /* ── Location search + save ────────────────── */
+    async function searchProfileLocation() {
+        const input = document.getElementById('profileLocation');
+        const q = input.value.trim();
+        if (q.length < 2) { showToast('Mindestens 2 Zeichen', false); return; }
+        try {
+            const params = new URLSearchParams({ q, format: 'json', addressdetails: '1', countrycodes: 'de,nl', limit: '5', featuretype: 'city' });
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { headers: { 'Accept-Language': 'de' } });
+            const results = await res.json();
+            if (results.length === 0) { showToast('Kein Ort gefunden', false); return; }
+            const r = results[0];
+            const city = r.address?.city || r.address?.town || r.address?.village || r.address?.municipality || r.display_name.split(',')[0];
+            input.value = city;
+            document.getElementById('profileLat').value = r.lat;
+            document.getElementById('profileLng').value = r.lon;
+            showToast(`📍 ${city}`);
+        } catch { showToast('Fehler bei der Ortssuche', false); }
+    }
+
+    document.getElementById('profileLocationSearch').addEventListener('click', searchProfileLocation);
+    document.getElementById('profileLocation').addEventListener('input', () => {
+        document.getElementById('profileLat').value = '';
+        document.getElementById('profileLng').value = '';
+    });
+
+    document.getElementById('saveLocationBtn').addEventListener('click', async () => {
+        const location = document.getElementById('profileLocation').value.trim();
+        const lat = parseFloat(document.getElementById('profileLat').value) || null;
+        const lng = parseFloat(document.getElementById('profileLng').value) || null;
+
+        if (location && !lat) { showToast('Bitte Ort mit 🔍 auflösen oder Feld leeren', false); return; }
+
+        const btn = document.getElementById('saveLocationBtn');
+        btn.disabled = true;
+        try {
+            const res = await fetch(`${API}/auth/update-profile`, {
+                method: 'POST',
+                headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ location: location || '', latitude: lat, longitude: lng })
+            });
+            if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+            if (res.ok) { showToast('Standort gespeichert'); }
+            else { const d = await res.json().catch(() => ({})); showToast(d.error || 'Fehler', false); }
+        } catch { showToast('Netzwerkfehler', false); }
+        finally { btn.disabled = false; }
     });
 
     loadProfile();

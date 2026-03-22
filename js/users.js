@@ -117,6 +117,7 @@
 
         if (!username || !password) { showError('createUserError', 'Benutzername und Kennwort sind Pflicht.'); return; }
         if (password.length < 8) { showError('createUserError', 'Kennwort: mindestens 8 Zeichen.'); return; }
+        if (!isLocationValid('newUserLocation', 'newUserLat')) { showError('createUserError', 'Bitte Ort mit 🔍 auflösen oder Feld leeren.'); return; }
 
         const res = await apiCall(`${API}/manage/users`, {
             method: 'POST',
@@ -205,6 +206,7 @@
         const displayName = document.getElementById('editDisplayName').value.trim();
         const role = document.getElementById('editUserRole').value;
         if (!displayName) { showError('editUserError', 'Anzeigename darf nicht leer sein.'); return; }
+        if (!isLocationValid('editUserLocation', 'editUserLat')) { showError('editUserError', 'Bitte Ort mit 🔍 auflösen oder Feld leeren.'); return; }
 
         const res = await apiCall(`${API}/manage/users/${encodeURIComponent(editTarget)}`, {
             method: 'PUT',
@@ -232,20 +234,34 @@
     async function searchLocation(inputId, latId, lngId) {
         const input = document.getElementById(inputId);
         const q = input.value.trim();
-        if (q.length < 2) { showToast('Mindestens 2 Zeichen', false); return; }
+        if (q.length < 2) { showToast('Mindestens 2 Zeichen', false); return false; }
         try {
             const params = new URLSearchParams({ q, format: 'json', addressdetails: '1', countrycodes: 'de,nl', limit: '5', featuretype: 'city' });
             const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, { headers: { 'Accept-Language': 'de' } });
             const results = await res.json();
-            if (results.length === 0) { showToast('Kein Ort gefunden', false); return; }
+            if (results.length === 0) { showToast('Kein Ort gefunden', false); return false; }
             const r = results[0];
             const city = r.address?.city || r.address?.town || r.address?.village || r.address?.municipality || r.display_name.split(',')[0];
             input.value = city;
             document.getElementById(latId).value = r.lat;
             document.getElementById(lngId).value = r.lon;
             showToast(`📍 ${city}`);
-        } catch { showToast('Fehler bei der Ortssuche', false); }
+            return true;
+        } catch { showToast('Fehler bei der Ortssuche', false); return false; }
+    }
+
+    // Block save if location text entered but not resolved
+    function isLocationValid(inputId, latId) {
+        const loc = document.getElementById(inputId).value.trim();
+        const lat = document.getElementById(latId).value;
+        if (!loc) return true;
+        return !!lat;
     }
 
     document.getElementById('newUserLocationSearch').addEventListener('click', () => searchLocation('newUserLocation', 'newUserLat', 'newUserLng'));
-    document.getElementById('editUserLocationSearch').addEventListener('click', () => searchLocation('editUserLocation', 'editUserLat', 'editUserLng'));})();
+    document.getElementById('editUserLocationSearch').addEventListener('click', () => searchLocation('editUserLocation', 'editUserLat', 'editUserLng'));
+
+    // Clear lat/lng when location text changes manually
+    document.getElementById('newUserLocation').addEventListener('input', () => { document.getElementById('newUserLat').value = ''; document.getElementById('newUserLng').value = ''; });
+    document.getElementById('editUserLocation').addEventListener('input', () => { document.getElementById('editUserLat').value = ''; document.getElementById('editUserLng').value = ''; });
+})();

@@ -36,25 +36,28 @@
             listEl.innerHTML = '<p style="color:#6e6e73;text-align:center;padding:2rem">Kein Equipment vorhanden.</p>';
             return;
         }
-        listEl.innerHTML = items.map(item => `
+        listEl.innerHTML = items.map(item => {
+            const locInfo = item.location ? '📍 ' + esc(item.location) : '';
+            const commentInfo = item.comment ? esc(item.comment) : '';
+            const info = [locInfo, commentInfo].filter(Boolean).join(' · ') || 'Keine Details';
+            return `
             <div class="eq-card">
                 <div class="eq-info">
                     <strong>${esc(item.displayName)}</strong>
-                    <small>${item.location ? '📍 ' + esc(item.location) : 'Kein Standort'}</small>
+                    <small>${info}</small>
                 </div>
                 <div class="eq-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="EQ.edit('${esc(item.rowKey)}','${esc(item.displayName)}','${esc(item.location || '')}',${item.latitude || 0},${item.longitude || 0})">Bearbeiten</button>
+                    <button class="btn btn-secondary btn-sm" onclick="EQ.edit('${esc(item.rowKey)}','${esc(item.displayName)}','${esc(item.comment || '')}','${esc(item.location || '')}',${item.latitude || 0},${item.longitude || 0})">Bearbeiten</button>
                     <button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="EQ.del('${esc(item.rowKey)}','${esc(item.displayName)}')">Löschen</button>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     /* ── Create ───────────────────────────────── */
     document.getElementById('addBtn').addEventListener('click', () => {
         document.getElementById('newEqName').value = '';
-        document.getElementById('newEqLocation').value = '';
-        document.getElementById('newEqLat').value = '';
-        document.getElementById('newEqLng').value = '';
+        document.getElementById('newEqComment').value = '';
         hideError('createEqError');
         openModal(createModal);
     });
@@ -69,9 +72,7 @@
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 displayName,
-                location: document.getElementById('newEqLocation').value.trim() || null,
-                latitude: parseFloat(document.getElementById('newEqLat').value) || null,
-                longitude: parseFloat(document.getElementById('newEqLng').value) || null
+                comment: document.getElementById('newEqComment').value.trim() || null
             })
         });
         btn.disabled = false;
@@ -83,9 +84,10 @@
     /* ── Edit ─────────────────────────────────── */
     let editTarget = '';
     window.EQ = window.EQ || {};
-    EQ.edit = function (rowKey, displayName, location, lat, lng) {
+    EQ.edit = function (rowKey, displayName, comment, location, lat, lng) {
         editTarget = rowKey;
         document.getElementById('editEqName').value = displayName;
+        document.getElementById('editEqComment').value = comment || '';
         document.getElementById('editEqLocation').value = location;
         document.getElementById('editEqLat').value = lat || '';
         document.getElementById('editEqLng').value = lng || '';
@@ -103,6 +105,7 @@
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 displayName,
+                comment: document.getElementById('editEqComment').value.trim() || null,
                 location: document.getElementById('editEqLocation').value.trim() || null,
                 latitude: parseFloat(document.getElementById('editEqLat').value) || null,
                 longitude: parseFloat(document.getElementById('editEqLng').value) || null
@@ -144,7 +147,6 @@
         } catch { showToast('Fehler bei der Ortssuche', false); }
     }
 
-    document.getElementById('newEqLocationSearch').addEventListener('click', () => searchLocation('newEqLocation', 'newEqLat', 'newEqLng'));
     document.getElementById('editEqLocationSearch').addEventListener('click', () => searchLocation('editEqLocation', 'editEqLat', 'editEqLng'));
 
     /* ── Init ─────────────────────────────────── */
