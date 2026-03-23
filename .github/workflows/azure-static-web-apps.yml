@@ -39,7 +39,7 @@ jobs:
         run: |
           COMMIT_COUNT=$(git rev-list --count HEAD)
           SHORT_HASH=$(git rev-parse --short HEAD)
-          BUILD_VERSION="v1.2.${COMMIT_COUNT}-${SHORT_HASH}"
+          BUILD_VERSION="v1.3.${COMMIT_COUNT}-${SHORT_HASH}"
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/guest-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/field-nav.js

@@ -7,6 +7,7 @@
     const STORAGE_KEY_CATEGORY = 'lostdogtracer_guest_category';
     const STORAGE_KEY_UUID = 'lostdogtracer_guest_uuid';
     const STORAGE_KEY_TOKEN = 'lostdogtracer_guest_token';
+    const STORAGE_KEY_NICK = 'lostdogtracer_guest_nick';
 
     // ── Read key + token from URL ────────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
@@ -52,6 +53,7 @@
 
         // ── Guest token handling ─────────────────────────────────
         await ensureGuestToken();
+        updateGreeting();
 
         await loadGuestCategory();
         updateButtonState();
@@ -189,6 +191,7 @@
         document.getElementById('guestLinkClose').addEventListener('click', async () => {
             const nickname = document.getElementById('guestNickname').value.trim();
             if (nickname && uuid) {
+                localStorage.setItem(STORAGE_KEY_NICK, nickname);
                 try {
                     await fetch(`${API_BASE}/guest/nickname`, {
                         method: 'PUT',
@@ -198,7 +201,15 @@
                 } catch { /* best effort */ }
             }
             overlay.remove();
+            updateGreeting();
         });
+    }
+
+    function updateGreeting() {
+        const el = document.getElementById('guestGreeting');
+        if (!el) return;
+        const nick = localStorage.getItem(STORAGE_KEY_NICK);
+        el.textContent = nick ? `Hallo, ${nick}!` : 'Hallo, Gast-Helfer*in!';
     }
 
     // ── Resolve dog name via key ─────────────────────────────────
