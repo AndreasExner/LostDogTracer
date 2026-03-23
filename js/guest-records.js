@@ -55,8 +55,10 @@
     }
 
     function init() {
+        const ownerFilterEl = document.getElementById('ownerFilter');
         sortFieldEl.addEventListener('change', () => { sortRecords(); renderTable(); });
         pageSizeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
+        ownerFilterEl.addEventListener('change', () => { sortRecords(); renderTable(); renderPagination(); updateDeleteButton(); });
         selectAllEl.addEventListener('change', () => {
             document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = selectAllEl.checked; });
             updateDeleteButton();
@@ -95,16 +97,22 @@
     }
 
     // ── Render table ─────────────────────────────────────────────
+    function getFilteredRecords() {
+        const showMine = document.getElementById('ownerFilter').value === 'mine';
+        return showMine ? data.records.filter(r => r.isOwner) : data.records;
+    }
+
     function renderTable() {
         bodyEl.innerHTML = '';
         selectAllEl.checked = false;
+        const filtered = getFilteredRecords();
 
-        if (data.records.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="5" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+        if (filtered.length === 0) {
+            bodyEl.innerHTML = '<tr><td colspan="5" style="color:#6e6e73;text-align:center;padding:2rem">Keine Eintr\u00e4ge</td></tr>';
             return;
         }
 
-        data.records.forEach(r => {
+        filtered.forEach(r => {
             const tr = document.createElement('tr');
             const photoCell = r.photoUrl
                 ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
@@ -124,7 +132,8 @@
 
     // ── Pagination ───────────────────────────────────────────────
     function renderPagination() {
-        pageInfoEl.textContent = `${data.totalCount} Einträge — Seite ${data.page} von ${data.totalPages}`;
+        const filtered = getFilteredRecords();
+        pageInfoEl.textContent = `${filtered.length} Einträge`;
         pageBtnsEl.innerHTML = '';
 
         if (data.totalPages <= 1) return;

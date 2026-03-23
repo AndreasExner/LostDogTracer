@@ -78,6 +78,9 @@ public class GuestTokenFunction
                 { "CreatedAt", DateTimeOffset.UtcNow.ToString("o") }
             };
 
+            if (!string.IsNullOrWhiteSpace(body.NickName))
+                entity["NickName"] = body.NickName.Trim();
+
             await table.AddEntityAsync(entity);
             _logger.LogInformation("Guest registered: UUID={Uuid}", uuid);
 
@@ -101,5 +104,6 @@ public class GuestTokenFunction
     {
         public string? Uuid { get; init; }
         public string? DogKey { get; init; }
+        public string? NickName { get; init; }
     }
 }

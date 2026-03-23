@@ -106,21 +106,51 @@
         const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
         if (storedToken) {
             guestToken = storedToken;
+            // Ensure URL contains token for bookmarking
+            if (!urlToken) history.replaceState(null, '', buildPersonalLink());
             return;
         }
 
-        // 3. Register: get new token from backend
+        // 3. No token yet — show nickname dialog, then register
         const uuid = getOrCreateUuid();
+        showNicknameDialog(uuid);
+    }
+
+    function showNicknameDialog(uuid) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:14px;padding:2rem;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
+                <h3 style="margin:0 0 1rem;font-size:1.125rem;">Willkommen!</h3>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 1rem;">Bevor es losgeht, kannst du optional einen Spitznamen angeben. Dieser wird nur intern verwendet, damit wir wissen, wer welche Flyer aufgehängt hat.</p>
+                <input type="text" id="guestNickname" placeholder="Spitzname (optional)" autocomplete="off" maxlength="30" style="width:100%;padding:0.75rem 1rem;font-size:1rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;">
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+                    <button class="btn btn-primary btn-sm" id="guestNicknameOk" style="padding:0.5rem 1rem;">Weiter</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        document.getElementById('guestNicknameOk').addEventListener('click', async () => {
+            const nickname = document.getElementById('guestNickname').value.trim();
+            overlay.remove();
+            await registerGuest(uuid, nickname || null);
+        });
+    }
+
+    async function registerGuest(uuid, nickname) {
         try {
+            const payload = { uuid, dogKey: guestKey };
+            if (nickname) payload.nickName = nickname;
             const res = await fetch(`${API_BASE}/guest/register`, {
                 method: 'POST',
                 headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uuid, dogKey: guestKey })
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 const data = await res.json();
                 guestToken = data.token;
                 localStorage.setItem(STORAGE_KEY_TOKEN, guestToken);
+                history.replaceState(null, '', buildPersonalLink());
                 if (!data.existing) showPersonalLinkDialog();
             }
         } catch {
@@ -141,16 +171,32 @@
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:flex;align-items:center;justify-content:center;';
         overlay.innerHTML = `
-            <div style="background:#fff;border-radius:14px;padding:2rem;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
-                <h3 style="margin:0 0 0.75rem;font-size:1.125rem;">Dein persönlicher Link</h3>
-                <p style="font-size:0.875rem;color:#6e6e73;margin-bottom:1rem;">Bitte speichere diesen Link als Lesezeichen. Damit kannst du deine eigenen Einträge später löschen.</p>
+            <div style="background:#fff;border-radius:14px;padding:2rem;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
+                <h3 style="margin:0 0 1rem;font-size:1.125rem;">Dein persönlicher Link</h3>
+                <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Warum bekomme ich einen persönlichen Link?</p>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 0.75rem;">Du möchtest uns helfen Flyer aufzuhängen? Das ist super. Diese App hilft dir dabei, die Flyer später zu finden um sie wieder zu entfernen. Dafür ist es wichtig, dass dir die Standorte angezeigt werden, die du selbst geflyert hast.</p>
+                <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Werden von mir persönliche Daten gespeichert?</p>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 0.75rem;">Nein. Der Link enthält einen zufällig generierten Schlüssel, der nur mit dem Standort des Flyers verknüpft ist. Du musst – und sollst – keine persönlichen Daten in der App eingeben.</p>
+                <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Was mache ich mit dem Link?</p>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 1rem;">Schicke ihn dir als Mail oder WhatsApp, oder speichere ihn als Favoriten. Gib ihn bitte nicht an andere weiter.</p>
                 <input type="text" readonly value="${link.replace(/"/g, '&quot;')}" id="guestLinkInput" style="width:100%;padding:0.75rem 1rem;font-size:0.8125rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;background:#f5f5f7;">
-                <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;flex-wrap:wrap;">
+                    ${navigator.share ? '<button class="btn btn-secondary btn-sm" id="guestLinkShare" style="padding:0.5rem 1rem;">Link teilen</button>' : ''}
                     <button class="btn btn-secondary btn-sm" id="guestLinkCopy" style="padding:0.5rem 1rem;">Link kopieren</button>
                     <button class="btn btn-primary btn-sm" id="guestLinkClose" style="padding:0.5rem 1rem;">Weiter</button>
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+
+        if (navigator.share) {
+            document.getElementById('guestLinkShare').addEventListener('click', () => {
+                navigator.share({
+                    title: 'LostDogTracer – Mein Link',
+                    text: 'Mein persönlicher Link für die Hundesuche:',
+                    url: link
+                }).catch(() => {});
+            });
+        }
 
         document.getElementById('guestLinkCopy').addEventListener('click', () => {
             const inp = document.getElementById('guestLinkInput');

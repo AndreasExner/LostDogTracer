@@ -11,10 +11,12 @@
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
 
-    // Read name + lostDog from URL params
+    // Read name + lostDog + token from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const filterName = urlParams.get('name') || '';
     const filterDog = urlParams.get('lostDog') || '';
+    const guestToken = urlParams.get('token') || localStorage.getItem('lostdogtracer_guest_token') || '';
+    const ownerFilterEl = document.getElementById('ownerFilter');
 
     if (!filterName || !filterDog) {
         filterInfoEl.textContent = '⚠️ Kein Name/Hund ausgewählt';
@@ -153,6 +155,7 @@
             params.set('pageSize', 'all');
             params.set('name', filterName);
             params.set('lostDog', filterDog);
+            if (guestToken) params.set('guestToken', guestToken);
 
             const res = await fetch(`${API_BASE}/my-records?${params}`, {
                 headers: FT_AUTH.publicHeaders()
@@ -160,7 +163,9 @@
             if (!res.ok) throw new Error();
 
             const data = await res.json();
-            const records = data.records || [];
+            const allRecords = data.records || [];
+            const showMine = ownerFilterEl.value === 'mine';
+            const records = showMine ? allRecords.filter(r => r.isOwner) : allRecords;
 
             markerCountEl.textContent = `${records.length} Standort${records.length !== 1 ? 'e' : ''}`;
 
@@ -194,7 +199,9 @@
                 const categoryHtml = r.category ? `<br>🏷️ ${escHtml(r.category)}` : '';
                 const commentHtml = r.comment ? `<br>💬 ${escHtml(r.comment)}` : '';
 
-                const deleteBtnHtml = `<div style="margin-top:6px;"><button class="popup-delete-btn" data-pk="${escHtml(r.partitionKey)}" data-rk="${escHtml(r.rowKey)}">Löschen</button></div>`;
+                const deleteBtnHtml = r.isOwner
+                    ? `<div style="margin-top:6px;"><button class="popup-delete-btn" data-pk="${escHtml(r.partitionKey)}" data-rk="${escHtml(r.rowKey)}">L\u00f6schen</button></div>`
+                    : '';
 
                 marker.bindPopup(
                     `<strong>${escHtml(r.name)}</strong><br>` +
@@ -284,7 +291,14 @@
 
     // ── Start ────────────────────────────────────────────────────
     loadAndDisplay();
-
+    ownerFilterEl.addEventListener('change', () => {
+        clusterGroup.clearLayers();
+        routesLayer.clearLayers();
+        legendEl.innerHTML = '';
+        Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
+        colorIdx = 0;
+        loadAndDisplay();
+    });
     // ── Delete handler (event delegation on map popups) ──────────
     document.addEventListener('click', async e => {
         const btn = e.target.closest('.popup-delete-btn');
@@ -298,7 +312,7 @@
             const res = await fetch(`${API_BASE}/my-records/delete`, {
                 method: 'POST',
                 headers: FT_AUTH.publicHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ name: filterName, lostDog: filterDog, keys: [{ partitionKey: pk, rowKey: rk }] })
+                body: JSON.stringify({ name: filterName, lostDog: filterDog, guestToken: guestToken || null, keys: [{ partitionKey: pk, rowKey: rk }] })
             });
             if (!res.ok) throw new Error();
             showToast('Eintrag gelöscht');
