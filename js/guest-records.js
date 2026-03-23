@@ -18,6 +18,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const filterDog = urlParams.get('lostDog') || '';
     const guestToken = urlParams.get('token') || localStorage.getItem('lostdogtracer_guest_token') || '';
+    let guestCategoryKey = '';
 
     let currentPage = 1;
     let data = { records: [], totalCount: 0, page: 1, pageSize: 20, totalPages: 1 };
@@ -29,6 +30,14 @@
         pageSizeEl.disabled = true;
     } else {
         resolveFilterInfo();
+        loadGuestCategoryThenInit();
+    }
+
+    async function loadGuestCategoryThenInit() {
+        try {
+            const cfg = window.FT_CONFIG || await fetch(`${API_BASE}/config`, { headers: FT_AUTH.publicHeaders() }).then(r => r.ok ? r.json() : null);
+            guestCategoryKey = cfg?.guestCategoryRowKey || '';
+        } catch { /* continue without filter */ }
         init();
     }
 
@@ -77,6 +86,11 @@
             });
             if (!res.ok) throw new Error();
             data = await res.json();
+            // Filter by guest category
+            if (guestCategoryKey) {
+                data.records = data.records.filter(r => r.categoryKey === guestCategoryKey);
+                data.totalCount = data.records.length;
+            }
             sortRecords();
             renderTable();
             renderPagination();

@@ -16,6 +16,7 @@
     const filterDog = urlParams.get('lostDog') || '';
     const guestToken = urlParams.get('token') || localStorage.getItem('lostdogtracer_guest_token') || '';
     const ownerFilterEl = document.getElementById('ownerFilter');
+    let guestCategoryKey = '';
 
     if (!filterDog) {
         filterInfoEl.textContent = '⚠️ Kein Hund ausgewählt';
@@ -153,7 +154,11 @@
             if (!res.ok) throw new Error();
 
             const data = await res.json();
-            const allRecords = data.records || [];
+            let allRecords = data.records || [];
+            // Filter by guest category
+            if (guestCategoryKey) {
+                allRecords = allRecords.filter(r => r.categoryKey === guestCategoryKey);
+            }
             const showMine = ownerFilterEl.value === 'mine';
             const records = showMine ? allRecords.filter(r => r.isOwner) : allRecords;
 
@@ -280,7 +285,13 @@
     }
 
     // ── Start ────────────────────────────────────────────────────
-    loadAndDisplay();
+    (async function () {
+        try {
+            const cfg = window.FT_CONFIG || await fetch(`${API_BASE}/config`, { headers: FT_AUTH.publicHeaders() }).then(r => r.ok ? r.json() : null);
+            guestCategoryKey = cfg?.guestCategoryRowKey || '';
+        } catch { /* continue without filter */ }
+        loadAndDisplay();
+    })();
     ownerFilterEl.addEventListener('change', () => {
         clusterGroup.clearLayers();
         routesLayer.clearLayers();
