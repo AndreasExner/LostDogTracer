@@ -93,6 +93,45 @@ public class GuestTokenFunction
         }
     }
 
+    /// <summary>Update nickname for an existing guest token.</summary>
+    [Function("GuestUpdateNickname")]
+    public async Task<IActionResult> UpdateNickname(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "guest/nickname")] HttpRequest req)
+    {
+        try
+        {
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ung\u00fcltiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+
+            var body = await JsonSerializer.DeserializeAsync<NicknameRequest>(req.Body,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (body is null || string.IsNullOrWhiteSpace(body.Uuid))
+                return new BadRequestObjectResult(new { error = "uuid ist erforderlich" });
+
+            var table = _tableService.GetTableClient(TableName);
+            var response = await table.GetEntityAsync<TableEntity>(PK, body.Uuid.Trim());
+            var entity = response.Value;
+
+            entity["NickName"] = (body.NickName ?? "").Trim();
+            await table.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Merge);
+
+            return new OkObjectResult(new { message = "Aktualisiert" });
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return new NotFoundObjectResult(new { error = "Gast nicht gefunden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating guest nickname");
+            return new StatusCodeResult(500);
+        }
+    }
+
     private static string GenerateToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(24);
@@ -104,6 +143,12 @@ public class GuestTokenFunction
     {
         public string? Uuid { get; init; }
         public string? DogKey { get; init; }
+        public string? NickName { get; init; }
+    }
+
+    private record NicknameRequest
+    {
+        public string? Uuid { get; init; }
         public string? NickName { get; init; }
     }
 }

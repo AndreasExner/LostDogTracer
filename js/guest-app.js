@@ -111,47 +111,24 @@
             return;
         }
 
-        // 3. No token yet — show nickname dialog, then register
+        // 3. No token yet — register immediately, then show link dialog
         const uuid = getOrCreateUuid();
-        showNicknameDialog(uuid);
+        await registerGuest(uuid);
     }
 
-    function showNicknameDialog(uuid) {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:flex;align-items:center;justify-content:center;';
-        overlay.innerHTML = `
-            <div style="background:#fff;border-radius:14px;padding:2rem;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
-                <h3 style="margin:0 0 1rem;font-size:1.125rem;">Willkommen!</h3>
-                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 1rem;">Bevor es losgeht, kannst du optional einen Spitznamen angeben. Dieser wird nur intern verwendet, damit wir wissen, wer welche Flyer aufgehängt hat.</p>
-                <input type="text" id="guestNickname" placeholder="Spitzname (optional)" autocomplete="off" maxlength="30" style="width:100%;padding:0.75rem 1rem;font-size:1rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;">
-                <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
-                    <button class="btn btn-primary btn-sm" id="guestNicknameOk" style="padding:0.5rem 1rem;">Weiter</button>
-                </div>
-            </div>`;
-        document.body.appendChild(overlay);
-
-        document.getElementById('guestNicknameOk').addEventListener('click', async () => {
-            const nickname = document.getElementById('guestNickname').value.trim();
-            overlay.remove();
-            await registerGuest(uuid, nickname || null);
-        });
-    }
-
-    async function registerGuest(uuid, nickname) {
+    async function registerGuest(uuid) {
         try {
-            const payload = { uuid, dogKey: guestKey };
-            if (nickname) payload.nickName = nickname;
             const res = await fetch(`${API_BASE}/guest/register`, {
                 method: 'POST',
                 headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ uuid, dogKey: guestKey })
             });
             if (res.ok) {
                 const data = await res.json();
                 guestToken = data.token;
                 localStorage.setItem(STORAGE_KEY_TOKEN, guestToken);
                 history.replaceState(null, '', buildPersonalLink());
-                if (!data.existing) showPersonalLinkDialog();
+                if (!data.existing) showPersonalLinkDialog(uuid);
             }
         } catch {
             // Offline or error — continue without token
@@ -176,9 +153,9 @@
                 <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Warum bekomme ich einen persönlichen Link?</p>
                 <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 0.75rem;">Du möchtest uns helfen Flyer aufzuhängen? Das ist super. Diese App hilft dir dabei, die Flyer später zu finden um sie wieder zu entfernen. Dafür ist es wichtig, dass dir die Standorte angezeigt werden, die du selbst geflyert hast.</p>
                 <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Werden von mir persönliche Daten gespeichert?</p>
-                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 0.75rem;">Nein. Der Link enthält einen zufällig generierten Schlüssel, der nur mit dem Standort des Flyers verknüpft ist. Du musst – und sollst – keine persönlichen Daten in der App eingeben.</p>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 0.75rem;">Nein. Der Link enthält einen zufällig generierten Schlüssel, der nur mit dem Standort des Flyers verknüpft ist. Du musst – und sollst – keine persönlichen Daten in der App eingeben. Dein „Spitzname" kann frei erfunden sein.</p>
                 <p style="font-size:0.8125rem;font-weight:600;color:#1d1d1f;margin:0 0 0.25rem;">Was mache ich mit dem Link?</p>
-                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 1rem;">Schicke ihn dir als Mail oder WhatsApp, oder speichere ihn als Favoriten. Gib ihn bitte nicht an andere weiter.</p>
+                <p style="font-size:0.8125rem;color:#6e6e73;margin:0 0 1rem;">Teile ihn dir als Mail oder WhatsApp, oder speichere ihn als Favorit. Gib ihn bitte nicht an andere weiter.</p>
                 <input type="text" readonly value="${link.replace(/"/g, '&quot;')}" id="guestLinkInput" style="width:100%;padding:0.75rem 1rem;font-size:0.8125rem;border:1px solid #d2d2d7;border-radius:10px;outline:none;margin-bottom:0.75rem;background:#f5f5f7;">
                 <div style="display:flex;gap:0.5rem;justify-content:flex-end;flex-wrap:wrap;">
                     ${navigator.share ? '<button class="btn btn-secondary btn-sm" id="guestLinkShare" style="padding:0.5rem 1rem;">Link teilen</button>' : ''}
@@ -208,7 +185,17 @@
                 document.getElementById('guestLinkCopy').textContent = '✓ Kopiert';
             });
         });
-        document.getElementById('guestLinkClose').addEventListener('click', () => {
+        document.getElementById('guestLinkClose').addEventListener('click', async () => {
+            const nickname = document.getElementById('guestNickname').value.trim();
+            if (nickname && uuid) {
+                try {
+                    await fetch(`${API_BASE}/guest/nickname`, {
+                        method: 'PUT',
+                        headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uuid, nickName: nickname })
+                    });
+                } catch { /* best effort */ }
+            }
             overlay.remove();
         });
     }

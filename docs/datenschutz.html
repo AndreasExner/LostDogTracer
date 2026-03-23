@@ -63,11 +63,21 @@
 <h3>3.4 Gast-Zugang</h3>
 <p>Gäste können über einen Link ohne Registrierung Standorte erfassen. Es wird <strong>kein Benutzerkonto</strong> erstellt. Der Eintrag wird unter dem festen Bezeichner „HALTER*IN" gespeichert.</p>
 
-<h3>3.5 Technische Daten</h3>
+<h3>3.5 Gast-Token (persönlicher Link)</h3>
+<p>Für anonyme Helfer wird beim ersten Zugriff ein <strong>zufällig generierter Schlüssel (Token)</strong> erzeugt und in einer separaten Tabelle gespeichert. Der Token dient ausschließlich dazu, dem Helfer seine eigenen Flyer-Standorte zuzuordnen, damit er diese später selbst löschen kann.</p>
+<table>
+    <tr><th>Datum</th><th>Zweck</th><th>Personenbezug</th></tr>
+    <tr><td>UUID (zufällig generiert)</td><td>Verhinderung doppelter Registrierung</td><td>Nein – kein Bezug zu einer Person</td></tr>
+    <tr><td>Token (zufällig generiert)</td><td>Zuordnung eigener Einträge</td><td>Nein – kryptografischer Schlüssel</td></tr>
+    <tr><td>Spitzname (optional, frei wählbar)</td><td>Interne Zuordnung der Flyer-Standorte</td><td>Nein – pseudonymes Kennzeichen</td></tr>
+</table>
+<p>Es werden <strong>keine personenbezogenen Daten</strong> erhoben. Helfer werden in der App ausdrücklich darauf hingewiesen, keine persönlichen Daten einzugeben. Der Token und die UUID werden im <strong>localStorage</strong> des Browsers gespeichert und bei Löschung der Browserdaten entfernt.</p>
+
+<h3>3.6 Technische Daten</h3>
 <p>Die App verwendet <strong>keine Cookies</strong>. Folgende lokale Speichermechanismen werden genutzt:</p>
 <ul>
     <li><strong>sessionStorage</strong>: Authentifizierungs-Token (wird beim Schließen des Tabs gelöscht)</li>
-    <li><strong>localStorage</strong>: Theme-Präferenz (Dark/Light Mode), letzte Dropdown-Auswahlen</li>
+    <li><strong>localStorage</strong>: Theme-Präferenz (Dark/Light Mode), letzte Dropdown-Auswahlen, Gast-UUID und Gast-Token</li>
     <li><strong>IndexedDB</strong>: Offline-Warteschlange für GPS-Einträge (bis zur Übertragung)</li>
 </ul>
 <p>Diese Daten verbleiben <strong>ausschließlich auf dem Gerät</strong> des Nutzers und werden nicht an Server übertragen (außer die GPS-Einträge bei der Synchronisation).</p>
@@ -104,6 +114,8 @@
     <tr><td>GPS-Einträge</td><td>Bis zur manuellen Löschung durch den Nutzer oder einen Administrator</td></tr>
     <tr><td>Fotos</td><td>Bis zur manuellen Löschung</td></tr>
     <tr><td>Benutzerkonten</td><td>Bis zur Löschung durch einen Administrator</td></tr>
+    <tr><td>Gast-Token (Server)</td><td>Bis zur manuellen Löschung durch einen Administrator</td></tr>
+    <tr><td>Gast-Token (localStorage)</td><td>Bis zur Löschung der Browserdaten durch den Nutzer</td></tr>
     <tr><td>Auth-Token (sessionStorage)</td><td>Maximal 24 Stunden, spätestens beim Schließen des Tabs</td></tr>
     <tr><td>Offline-Queue (IndexedDB)</td><td>Bis zur erfolgreichen Übertragung an den Server</td></tr>
 </table>
