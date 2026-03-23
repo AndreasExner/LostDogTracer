@@ -55,8 +55,10 @@
     }
 
     function init() {
+        const scopeEl = document.getElementById('scopeFilter');
         sortFieldEl.addEventListener('change', () => { sortRecords(); renderTable(); });
         pageSizeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
+        scopeEl.addEventListener('change', () => { currentPage = 1; loadRecords(); });
         selectAllEl.addEventListener('change', () => {
             document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = selectAllEl.checked; });
             updateDeleteButton();
@@ -71,10 +73,11 @@
     async function loadRecords() {
         bodyEl.innerHTML = '<tr><td colspan="5" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
         const ps = pageSizeEl.value;
+        const showMine = document.getElementById('scopeFilter').value === 'mine';
         const params = new URLSearchParams();
         params.set('pageSize', ps);
         params.set('page', currentPage);
-        params.set('name', filterName);
+        if (showMine) params.set('name', filterName);
         params.set('lostDog', filterDog);
 
         try {
@@ -102,8 +105,12 @@
             const photoCell = r.photoUrl
                 ? `<td><img src="${esc(r.photoUrl)}" class="thumb" alt="Foto" onclick="document.getElementById('lightboxImg').src=this.src;document.getElementById('lightbox').classList.remove('hidden');"></td>`
                 : '<td class="no-photo">—</td>';
+            const isOwn = r.partitionKey === filterName;
+            const cbCell = isOwn
+                ? `<td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>`
+                : '<td></td>';
             tr.innerHTML = `
-                <td><input type="checkbox" class="row-cb" data-pk="${esc(r.partitionKey)}" data-rk="${esc(r.rowKey)}"></td>
+                ${cbCell}
                 <td>${formatDate(r.recordedAt)}</td>
                 <td>${esc(r.category || '')}</td>
                 <td>${esc(r.comment || '')}</td>

@@ -171,9 +171,14 @@
 
             const dogRecords = {};
             const bounds = [];
+            const guestNick = localStorage.getItem('lostdogtracer_guest_nick');
 
             records.forEach(r => {
                 if (!r.latitude || !r.longitude) return;
+                // Resolve GUEST display name
+                if (r.partitionKey === 'GUEST') {
+                    r.name = r.isOwner && guestNick ? `Gast: ${guestNick}` : 'Gast-Helfer*in';
+                }
 
                 const color = getDogColor(r.lostDog);
 

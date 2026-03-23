@@ -152,7 +152,8 @@
 
             const params = new URLSearchParams();
             params.set('pageSize', 'all');
-            params.set('name', filterName);
+            const showMine = document.getElementById('scopeFilter').value === 'mine';
+            if (showMine) params.set('name', filterName);
             params.set('lostDog', filterDog);
 
             const res = await fetch(`${API_BASE}/my-records?${params}`, {
@@ -195,7 +196,9 @@
                 const categoryHtml = r.category ? `<br>🏷️ ${escHtml(r.category)}` : '';
                 const commentHtml = r.comment ? `<br>💬 ${escHtml(r.comment)}` : '';
 
-                const deleteBtnHtml = `<div style="margin-top:6px;"><button class="popup-delete-btn" data-pk="${escHtml(r.partitionKey)}" data-rk="${escHtml(r.rowKey)}">Löschen</button></div>`;
+                const deleteBtnHtml = r.partitionKey === filterName
+                    ? `<div style="margin-top:6px;"><button class="popup-delete-btn" data-pk="${escHtml(r.partitionKey)}" data-rk="${escHtml(r.rowKey)}">L\u00f6schen</button></div>`
+                    : '';
 
                 marker.bindPopup(
                     `<strong>${escHtml(r.name)}</strong><br>` +
@@ -285,7 +288,14 @@
 
     // ── Start ────────────────────────────────────────────────────
     loadAndDisplay();
-
+    document.getElementById('scopeFilter').addEventListener('change', () => {
+        clusterGroup.clearLayers();
+        routesLayer.clearLayers();
+        legendEl.innerHTML = '';
+        Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
+        colorIdx = 0;
+        loadAndDisplay();
+    });
     // ── Delete handler (event delegation on map popups) ──────────
     document.addEventListener('click', async e => {
         const btn = e.target.closest('.popup-delete-btn');
