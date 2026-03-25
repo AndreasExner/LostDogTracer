@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Wartung</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🔧 Wartung</h1>
+            <a href="index.html" class="btn-back">Zurück</a>
+        </div>
+
+        <!-- Backup Export -->
+        <div class="backup-section">
+            <h2 style="font-size:1.15rem;margin-bottom:0.75rem;">Daten-Backup</h2>
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Exportiert alle Tabellen (GPS-Daten, Namen, Hunde, Kategorien) als JSON-Datei.
+                Fotos werden nicht mitexportiert — sie verbleiben im Blob Storage.
+            </p>
+            <button class="btn btn-primary" id="exportBtn">📥 Backup herunterladen</button>
+            <span id="exportStatus" style="margin-left:0.75rem;font-size:0.875rem;color:var(--text-secondary);"></span>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-color);margin:2rem 0;">
+
+        <!-- Backup Import -->
+        <div class="backup-section">
+            <h2 style="font-size:1.15rem;margin-bottom:0.75rem;">Daten wiederherstellen</h2>
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Importiert Daten aus einer zuvor exportierten JSON-Datei.
+                Bestehende Einträge mit gleicher ID werden überschrieben, neue Einträge hinzugefügt.
+            </p>
+            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                <input type="file" id="importFile" accept=".json" style="font-size:0.875rem;">
+                <button class="btn btn-danger" id="importBtn" disabled>📤 Wiederherstellen</button>
+            </div>
+            <span id="importStatus" style="display:block;margin-top:0.75rem;font-size:0.875rem;color:var(--text-secondary);"></span>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-color);margin:2rem 0;">
+
+        <!-- Cleanup -->
+        <div class="backup-section">
+            <h2 style="font-size:1.15rem;margin-bottom:0.75rem;">Alte Daten bereinigen</h2>
+            <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem;">
+                Löscht GPS-Einträge und zugehörige Fotos, die älter als der angegebene Zeitraum sind.
+            </p>
+            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <select id="cleanupDays" style="padding:0.5rem 0.75rem;font-size:0.875rem;border:1px solid var(--border-color);border-radius:8px;outline:none;">
+                    <option value="30">Älter als 30 Tage</option>
+                    <option value="60">Älter als 60 Tage</option>
+                    <option value="90" selected>Älter als 90 Tage</option>
+                    <option value="180">Älter als 180 Tage</option>
+                    <option value="365">Älter als 365 Tage</option>
+                </select>
+                <select id="cleanupDog" style="padding:0.5rem 0.75rem;font-size:0.875rem;border:1px solid var(--border-color);border-radius:8px;outline:none;">
+                    <option value="">Alle Hunde</option>
+                </select>
+                <button class="btn btn-secondary" id="cleanupPreviewBtn">Vorschau</button>
+            </div>
+            <div id="cleanupPreview" style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:0.75rem;display:none;"></div>
+            <button class="btn btn-danger" id="cleanupExecBtn" style="display:none;">Bereinigung durchführen</button>
+            <span id="cleanupStatus" style="display:block;margin-top:0.5rem;font-size:0.875rem;color:var(--text-secondary);"></span>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.requireRole(4);
+    </script>
+    <script src="js/backup.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+</html>

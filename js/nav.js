@@ -2,7 +2,7 @@
 (function () {
     // Inject on sub-pages and index.html menu page
     const path = location.pathname;
-    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|equipment|backup|profile|docs)\.html$/i.test(path);
+    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|equipment|maintenance|profile|docs)\.html$/i.test(path);
     const isHome = /index\.html$/i.test(path) || path === '/' || path.endsWith('/');
     if (!isSubPage && !isHome) return;
 
@@ -13,7 +13,7 @@
         { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', minRole: 3 },
         { href: 'categories.html', icon: '🏷️', label: 'Kategorien', minRole: 4 },
         { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 3 },
-        { href: 'backup.html',     icon: '🔧', label: 'Wartung', minRole: 4 },
+        { href: 'maintenance.html', icon: '🔧', label: 'Wartung', minRole: 4 },
         { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
         { href: 'docs.html',       icon: '📖', label: 'Dokumentation', minRole: 1 },
     ];

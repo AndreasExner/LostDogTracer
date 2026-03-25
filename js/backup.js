@@ -108,4 +108,101 @@
         toastEl.className = isError ? 'toast error' : 'toast';
         toastTimeout = setTimeout(() => toastEl.classList.add('hidden'), 3000);
     }
+
+    // ── Cleanup ──────────────────────────────────────────────────
+    const cleanupDaysEl = document.getElementById('cleanupDays');
+    const cleanupDogEl = document.getElementById('cleanupDog');
+    const cleanupPreviewBtn = document.getElementById('cleanupPreviewBtn');
+    const cleanupPreviewEl = document.getElementById('cleanupPreview');
+    const cleanupExecBtn = document.getElementById('cleanupExecBtn');
+    const cleanupStatusEl = document.getElementById('cleanupStatus');
+
+    // Only init cleanup if elements exist (maintenance.html)
+    if (cleanupPreviewBtn) {
+        // Load dog list for filter
+        (async function loadDogs() {
+            try {
+                const res = await fetch(`${API_BASE}/lost-dogs`, { headers: FT_AUTH.publicHeaders() });
+                if (res.ok) {
+                    const dogs = await res.json();
+                    dogs.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.rowKey;
+                        opt.textContent = d.displayName;
+                        cleanupDogEl.appendChild(opt);
+                    });
+                }
+            } catch { /* ignore */ }
+        })();
+
+        cleanupPreviewBtn.addEventListener('click', async () => {
+            cleanupPreviewBtn.disabled = true;
+            cleanupPreviewBtn.textContent = '⏳…';
+            cleanupExecBtn.style.display = 'none';
+            cleanupPreviewEl.style.display = 'none';
+            cleanupStatusEl.textContent = '';
+
+            const params = new URLSearchParams();
+            params.set('olderThanDays', cleanupDaysEl.value);
+            if (cleanupDogEl.value) params.set('lostDog', cleanupDogEl.value);
+
+            try {
+                const res = await fetch(`${API_BASE}/manage/cleanup/preview?${params}`, {
+                    headers: FT_AUTH.adminHeaders()
+                });
+                if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+                if (!res.ok) throw new Error();
+
+                const data = await res.json();
+                if (data.recordCount === 0) {
+                    cleanupPreviewEl.textContent = `Keine Einträge älter als ${data.olderThanDays} Tage (Stichtag: ${data.cutoffDate})`;
+                    cleanupPreviewEl.style.display = '';
+                } else {
+                    cleanupPreviewEl.innerHTML =
+                        `<strong>${data.recordCount} Einträge</strong> und <strong>${data.photoCount} Fotos</strong> ` +
+                        `älter als ${data.olderThanDays} Tage (Stichtag: ${data.cutoffDate})` +
+                        (data.lostDog ? ` — gefiltert nach Hund` : '');
+                    cleanupPreviewEl.style.display = '';
+                    cleanupExecBtn.style.display = '';
+                }
+            } catch {
+                showToast('Fehler bei der Vorschau', true);
+            } finally {
+                cleanupPreviewBtn.disabled = false;
+                cleanupPreviewBtn.textContent = 'Vorschau';
+            }
+        });
+
+        cleanupExecBtn.addEventListener('click', async () => {
+            if (!confirm(`Alte Einträge und Fotos wirklich unwiderruflich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) return;
+
+            cleanupExecBtn.disabled = true;
+            cleanupExecBtn.textContent = '⏳ Wird bereinigt…';
+            cleanupStatusEl.textContent = '';
+
+            const params = new URLSearchParams();
+            params.set('olderThanDays', cleanupDaysEl.value);
+            if (cleanupDogEl.value) params.set('lostDog', cleanupDogEl.value);
+
+            try {
+                const res = await fetch(`${API_BASE}/manage/cleanup?${params}`, {
+                    method: 'POST',
+                    headers: FT_AUTH.adminHeaders()
+                });
+                if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
+                if (!res.ok) throw new Error();
+
+                const data = await res.json();
+                cleanupStatusEl.textContent = `✓ ${data.deletedRecords} Einträge und ${data.deletedPhotos} Fotos gelöscht`;
+                cleanupPreviewEl.style.display = 'none';
+                cleanupExecBtn.style.display = 'none';
+                showToast(data.message);
+            } catch {
+                showToast('Fehler bei der Bereinigung', true);
+            } finally {
+                cleanupExecBtn.disabled = false;
+                cleanupExecBtn.textContent = 'Bereinigung durchführen';
+            }
+        });
+    }
 })();

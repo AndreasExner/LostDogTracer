@@ -110,7 +110,7 @@ LostDogTracer/
 ├── lostdogs.html                 # Hunde verwalten
 ├── categories.html               # Kategorien verwalten
 ├── users.html                    # Benutzerverwaltung
-├── backup.html                   # Wartung (Backup/Restore)
+├── maintenance.html              # Wartung (Backup/Restore/Cleanup)
 ├── profile.html                  # Eigenes Profil
 ├── docs.html                     # Dokumentation (PDF-Links)
 ├── equipment.html                # Equipment verwalten
@@ -151,6 +151,7 @@ LostDogTracer/
 │   │   ├── UsersFunction.cs
 │   │   ├── AuthFunction.cs
 │   │   ├── BackupRestoreFunction.cs
+│   │   ├── CleanupFunction.cs
 │   │   ├── ConfigFunction.cs
 │   │   ├── EquipmentFunction.cs
 │   │   └── GuestTokenFunction.cs
