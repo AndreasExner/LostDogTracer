@@ -10,7 +10,7 @@
     const catDropdownEl = document.getElementById('filterCategoryDropdown');
     const catWrapEl = document.getElementById('categoryMultiSelect');
     const legendEl = document.getElementById('legend');
-    const toggleCirclesEl = document.getElementById('toggleCircles');
+    const toggleEquipmentEl = document.getElementById('toggleEquipment');
     const toggleRoutesEl = document.getElementById('toggleRoutes');
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
@@ -119,8 +119,9 @@
     map.addLayer(clusterGroup);
 
     // Optional overlay layers
-    const circlesLayer = L.layerGroup();
+    const equipmentLayer = L.layerGroup();
     const routesLayer = L.layerGroup();
+    let equipmentLoaded = false;
 
     // ── Filter change handler (debounced) ────────────────────────
     let filterTimer = null;
@@ -134,7 +135,6 @@
             Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
             colorIdx = 0;
             clusterGroup.clearLayers();
-            circlesLayer.clearLayers();
             routesLayer.clearLayers();
             legendEl.innerHTML = '';
             loadAndDisplay();
@@ -145,11 +145,12 @@
     // Category multi-select: events attached in loadAndDisplay populate step
 
     // ── Toggle handlers ──────────────────────────────────────────
-    toggleCirclesEl.addEventListener('change', () => {
-        if (toggleCirclesEl.checked) {
-            map.addLayer(circlesLayer);
+    toggleEquipmentEl.addEventListener('change', async () => {
+        if (toggleEquipmentEl.checked) {
+            if (!equipmentLoaded) await loadEquipmentMarkers();
+            map.addLayer(equipmentLayer);
         } else {
-            map.removeLayer(circlesLayer);
+            map.removeLayer(equipmentLayer);
         }
     });
 
@@ -298,20 +299,6 @@
 
                 clusterGroup.addLayer(marker);
                 bounds.push([r.latitude, r.longitude]);
-
-                // ── Accuracy circle ──
-                if (r.accuracy > 0) {
-                    const circle = L.circle([r.latitude, r.longitude], {
-                        radius: r.accuracy,
-                        color: color,
-                        fillColor: color,
-                        fillOpacity: 0.08,
-                        weight: 1.5,
-                        opacity: 0.4,
-                        interactive: false
-                    });
-                    circlesLayer.addLayer(circle);
-                }
 
                 // ── Collect for polylines ──
                 if (!dogRecords[r.lostDog]) dogRecords[r.lostDog] = [];
@@ -471,7 +458,6 @@
             cancelEdit();
 
             clusterGroup.clearLayers();
-            circlesLayer.clearLayers();
             routesLayer.clearLayers();
             legendEl.innerHTML = '';
             Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
@@ -517,7 +503,6 @@
 
             // Reload map data
             clusterGroup.clearLayers();
-            circlesLayer.clearLayers();
             routesLayer.clearLayers();
             legendEl.innerHTML = '';
             Object.keys(dogColorMap).forEach(k => delete dogColorMap[k]);
@@ -533,4 +518,53 @@
 
     // ── Start ────────────────────────────────────────────────────
     loadAndDisplay();
+
+    // ── Equipment layer ──────────────────────────────────────────
+    function equipmentIcon() {
+        return L.divIcon({
+            className: '',
+            html: `<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="24" height="24" rx="4" fill="#6e6e73" stroke="#fff" stroke-width="2"/>
+                <circle cx="14" cy="14" r="5" fill="none" stroke="#fff" stroke-width="1.5"/>
+                <circle cx="14" cy="14" r="1.5" fill="#fff"/>
+                <line x1="14" y1="7" x2="14" y2="9.5" stroke="#fff" stroke-width="1.3"/>
+                <line x1="14" y1="18.5" x2="14" y2="21" stroke="#fff" stroke-width="1.3"/>
+                <line x1="7" y1="14" x2="9.5" y2="14" stroke="#fff" stroke-width="1.3"/>
+                <line x1="18.5" y1="14" x2="21" y2="14" stroke="#fff" stroke-width="1.3"/>
+            </svg>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            popupAnchor: [0, -14]
+        });
+    }
+
+    async function loadEquipmentMarkers() {
+        try {
+            const res = await fetch(`${API_BASE}/manage/equipment`, {
+                headers: FT_AUTH.adminHeaders()
+            });
+            if (!res.ok) { showToast('Equipment konnte nicht geladen werden', true); return; }
+            const items = await res.json();
+            equipmentLayer.clearLayers();
+
+            items.forEach(item => {
+                if (!item.latitude || !item.longitude) return;
+                const locHtml = item.location ? `<br>📍 ${escHtml(item.location)}` : '';
+                const userHtml = item.userName ? `<br>👤 ${escHtml(item.userName)}` : '';
+                const commentHtml = item.comment ? `<br>💬 ${escHtml(item.comment)}` : '';
+
+                const marker = L.marker([item.latitude, item.longitude], { icon: equipmentIcon() });
+                marker.bindPopup(
+                    `<strong>⚙️ ${escHtml(item.displayName)}</strong>` +
+                    locHtml + userHtml + commentHtml,
+                    { maxWidth: 250 }
+                );
+                equipmentLayer.addLayer(marker);
+            });
+
+            equipmentLoaded = true;
+        } catch {
+            showToast('Fehler beim Laden des Equipments', true);
+        }
+    }
 })();
