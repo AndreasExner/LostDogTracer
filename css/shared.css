@@ -41,6 +41,16 @@
 }
 
 /* ── Site banner ──────────────────────────────────────────────── */
+.dev-banner {
+    background: #ff9500;
+    color: #000;
+    text-align: center;
+    padding: 0.25rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
 .site-banner {
     background: var(--bg-banner);
     color: #fff;

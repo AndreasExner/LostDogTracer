@@ -55,6 +55,15 @@
     // ── Site Banner from Config ──────────────────────────────────
     (async function loadSiteBanner() {
         try {
+            // Show DEV environment indicator
+            var deployEnv = '%%DEPLOY_ENV%%';
+            if (deployEnv === 'dev') {
+                var devBar = document.createElement('div');
+                devBar.className = 'dev-banner';
+                devBar.textContent = '\u26a0\ufe0f DEV-Umgebung';
+                document.body.insertBefore(devBar, document.body.firstChild);
+            }
+
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
             const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';

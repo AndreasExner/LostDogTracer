@@ -23,9 +23,11 @@ jobs:
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "SWA_TOKEN=${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" >> $GITHUB_ENV
             echo "DEPLOY_API_KEY=${{ secrets.PROD_API_KEY }}" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
           else
             echo "SWA_TOKEN=${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}" >> $GITHUB_ENV
             echo "DEPLOY_API_KEY=${{ secrets.DEV_API_KEY }}" >> $GITHUB_ENV
+            echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
           fi
 
       - name: Inject API key
@@ -44,6 +46,10 @@ jobs:
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/guest-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/field-nav.js
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" sw.js
+
+      - name: Inject deploy environment
+        run: |
+          sed -i "s/%%DEPLOY_ENV%%/${DEPLOY_ENV}/g" js/theme.js
 
       - name: Deploy to SWA
         uses: Azure/static-web-apps-deploy@v1
