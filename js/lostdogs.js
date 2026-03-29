@@ -193,16 +193,16 @@
         btn.textContent = '⏳ Wird erzeugt…';
 
         try {
-            const url = `${API_BASE}/manage/lost-dogs/${encodeURIComponent(shareRowKey)}/owner-key` + (regenerate ? '?force=true' : '');
-            const res = await fetch(url, {
+            const apiUrl = `${API_BASE}/manage/lost-dogs/${encodeURIComponent(shareRowKey)}/owner-key` + (regenerate ? '?force=true' : '');
+            const res = await fetch(apiUrl, {
                 method: 'POST',
                 headers: FT_AUTH.adminHeaders()
             });
             if (res.status === 401) { FT_AUTH.sessionExpired(); return; }
             if (!res.ok) throw new Error();
             const data = await res.json();
-            const url = `${window.location.origin}/owner-home.html?key=${encodeURIComponent(data.ownerKey)}`;
-            await navigator.clipboard.writeText(url);
+            const ownerUrl = `${window.location.origin}/owner-home.html?key=${encodeURIComponent(data.ownerKey)}`;
+            await navigator.clipboard.writeText(ownerUrl);
             btn.textContent = '✓ Kopiert';
             status.textContent = '✓ Besitzer-Link wurde in die Zwischenablage kopiert';
             status.style.display = 'block';
