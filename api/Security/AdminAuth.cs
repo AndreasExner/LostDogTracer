@@ -311,8 +311,10 @@ public class AdminAuth
             if (latitude.HasValue)
                 patch["Latitude"] = latitude.Value;
             if (longitude.HasValue)
-                patch["Longitude"] = longitude.Value;            if (accountant.HasValue)
-                patch[\"Accountant\"] = accountant.Value;            await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
+                patch["Longitude"] = longitude.Value;
+            if (accountant.HasValue)
+                patch["Accountant"] = accountant.Value;
+            await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
             return true;
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
