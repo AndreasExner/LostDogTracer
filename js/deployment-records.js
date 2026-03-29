@@ -13,6 +13,7 @@
     const editEndEl = document.getElementById('editEnd');
     const editKmStartEl = document.getElementById('editKmStart');
     const editKmEndEl = document.getElementById('editKmEnd');
+    const editActivityEl = document.getElementById('editActivity');
     const editSaveBtn = document.getElementById('editSaveBtn');
     const editCancelBtn = document.getElementById('editCancelBtn');
     const toastEl = document.getElementById('toast');
@@ -21,7 +22,7 @@
 
     // ── Load records ─────────────────────────────────────────────
     async function loadRecords() {
-        bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
+        bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
         const dog = filterDogEl.value;
         const params = new URLSearchParams();
         if (dog) params.set('dog', dog);
@@ -61,7 +62,7 @@
     function renderTable(records) {
         bodyEl.innerHTML = '';
         if (records.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
             return;
         }
         records.forEach(r => {
@@ -71,12 +72,13 @@
             tr.innerHTML =
                 `<td><input type="checkbox" class="row-cb" data-rk="${esc(r.rowKey)}"></td>` +
                 `<td>${esc(r.lostDog)}</td>` +
+                `<td>${esc(r.activity || '—')}</td>` +
                 `<td>${formatDateTime(r.startTime)}</td>` +
                 `<td>${formatDateTime(r.endTime)}</td>` +
                 `<td>${dur}</td>` +
                 `<td>${km}</td>` +
                 `<td style="white-space:nowrap;">` +
-                    `<button class="btn btn-primary btn-sm edit-btn" data-rk="${esc(r.rowKey)}" data-dog="${esc(r.lostDogKey)}" data-start="${esc(r.startTime)}" data-end="${esc(r.endTime)}" data-kms="${r.kmStart ?? ''}" data-kme="${r.kmEnd ?? ''}">✏️</button> ` +
+                    `<button class="btn btn-primary btn-sm edit-btn" data-rk="${esc(r.rowKey)}" data-dog="${esc(r.lostDogKey)}" data-start="${esc(r.startTime)}" data-end="${esc(r.endTime)}" data-kms="${r.kmStart ?? ''}" data-kme="${r.kmEnd ?? ''}" data-activity="${esc(r.activity || '')}">✏️</button> ` +
                     `<button class="btn btn-danger btn-sm del-btn" data-rk="${esc(r.rowKey)}" data-dog="${esc(r.lostDog)}">🗑️</button>` +
                 `</td>`;
             bodyEl.appendChild(tr);
@@ -93,6 +95,7 @@
             editEndEl.value = toLocalInput(editBtn.dataset.end);
             editKmStartEl.value = editBtn.dataset.kms || '';
             editKmEndEl.value = editBtn.dataset.kme || '';
+            editActivityEl.value = editBtn.dataset.activity || '';
             editModal.classList.remove('hidden');
             return;
         }
@@ -118,7 +121,8 @@
             startTime: editStartEl.value ? new Date(editStartEl.value).toISOString() : undefined,
             endTime: editEndEl.value ? new Date(editEndEl.value).toISOString() : undefined,
             kmStart: editKmStartEl.value ? parseInt(editKmStartEl.value, 10) : null,
-            kmEnd: editKmEndEl.value ? parseInt(editKmEndEl.value, 10) : null
+            kmEnd: editKmEndEl.value ? parseInt(editKmEndEl.value, 10) : null,
+            activity: editActivityEl.value || null
         };
 
         try {

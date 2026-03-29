@@ -54,14 +54,15 @@ public class DeploymentFunction
 
             var usersTable = _tableService.GetTableClient(UsersTable);
             var userEntity = await usersTable.GetEntityAsync<TableEntity>("users", username,
-                select: new[] { "DeploymentActive", "DeploymentDog", "DeploymentStart", "DeploymentKmStart" });
+                select: new[] { "DeploymentActive", "DeploymentDog", "DeploymentStart", "DeploymentKmStart", "DeploymentActivity" });
 
             return new OkObjectResult(new
             {
                 active = userEntity.Value.GetBoolean("DeploymentActive") ?? false,
                 dog = userEntity.Value.GetString("DeploymentDog") ?? "",
                 startTime = userEntity.Value.GetString("DeploymentStart") ?? "",
-                kmStart = userEntity.Value.GetInt32("DeploymentKmStart")
+                kmStart = userEntity.Value.GetInt32("DeploymentKmStart"),
+                activity = userEntity.Value.GetString("DeploymentActivity") ?? ""
             });
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
@@ -93,6 +94,7 @@ public class DeploymentFunction
 
             var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
             var dog = body.TryGetProperty("dog", out var d) ? d.GetString()?.Trim() : null;
+            var activity = body.TryGetProperty("activity", out var a) ? a.GetString()?.Trim() : null;
             var kmStart = body.TryGetProperty("kmStart", out var km) && km.ValueKind == JsonValueKind.Number ? km.GetInt32() : (int?)null;
 
             if (string.IsNullOrWhiteSpace(dog))
@@ -108,6 +110,10 @@ public class DeploymentFunction
             entity["DeploymentActive"] = true;
             entity["DeploymentDog"] = InputSanitizer.StripHtml(dog);
             entity["DeploymentStart"] = DateTimeOffset.UtcNow.ToString("o");
+            if (!string.IsNullOrWhiteSpace(activity))
+                entity["DeploymentActivity"] = InputSanitizer.StripHtml(activity);
+            else
+                entity.Remove("DeploymentActivity");
             if (kmStart.HasValue)
                 entity["DeploymentKmStart"] = kmStart.Value;
             else
@@ -152,6 +158,7 @@ public class DeploymentFunction
 
             var dog = entity.GetString("DeploymentDog") ?? "";
             var startStr = entity.GetString("DeploymentStart") ?? "";
+            var activity = entity.GetString("DeploymentActivity") ?? "";
             var kmStart = entity.GetInt32("DeploymentKmStart");
             var endTime = DateTimeOffset.UtcNow;
 
@@ -178,6 +185,7 @@ public class DeploymentFunction
             if (kmStart.HasValue) record["KmStart"] = kmStart.Value;
             if (kmEnd.HasValue) record["KmEnd"] = kmEnd.Value;
             if (kmDriven.HasValue) record["KmDriven"] = kmDriven.Value;
+            if (!string.IsNullOrWhiteSpace(activity)) record["Activity"] = activity;
 
             await table.AddEntityAsync(record);
 
@@ -186,6 +194,7 @@ public class DeploymentFunction
             entity.Remove("DeploymentDog");
             entity.Remove("DeploymentStart");
             entity.Remove("DeploymentKmStart");
+            entity.Remove("DeploymentActivity");
             await usersTable.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
 
             _logger.LogInformation("Deployment ended: {User} for {Dog}, {Duration}min",
@@ -246,6 +255,7 @@ public class DeploymentFunction
                     rowKey = entity.RowKey,
                     lostDog = displayDog,
                     lostDogKey = entityDog,
+                    activity = entity.GetString("Activity") ?? "",
                     startTime = entity.GetString("StartTime") ?? "",
                     endTime = entity.GetString("EndTime") ?? "",
                     duration = entity.GetInt32("Duration") ?? 0,
@@ -364,6 +374,8 @@ public class DeploymentFunction
                 entity["StartTime"] = startDt.ToString("o");
             if (body.TryGetProperty("endTime", out var e2) && DateTimeOffset.TryParse(e2.GetString(), out var endDt))
                 entity["EndTime"] = endDt.ToString("o");
+            if (body.TryGetProperty("activity", out var act))
+                entity["Activity"] = InputSanitizer.StripHtml(act.GetString() ?? "");
 
             if (body.TryGetProperty("kmStart", out var k1))
             {
@@ -505,6 +517,7 @@ public class DeploymentFunction
                     userDisplay = userLookup.GetValueOrDefault(user, user),
                     lostDog = dogLookup.GetValueOrDefault(entityDog, entityDog),
                     lostDogKey = entityDog,
+                    activity = entity.GetString("Activity") ?? "",
                     startTime = startStr,
                     endTime = entity.GetString("EndTime") ?? "",
                     duration = entity.GetInt32("Duration") ?? 0,

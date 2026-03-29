@@ -21,7 +21,7 @@
 
     // ── Load records ─────────────────────────────────────────────
     async function loadRecords() {
-        bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
+        bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Lädt…</td></tr>';
         const params = new URLSearchParams();
         if (filterUserEl.value) params.set('user', filterUserEl.value);
         if (filterDogEl.value) params.set('dog', filterDogEl.value);
@@ -80,7 +80,7 @@
         let sumKm = 0;
 
         if (records.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="7" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" style="color:#6e6e73;text-align:center;padding:2rem">Keine Einträge</td></tr>';
             totalDurationEl.textContent = '—';
             totalKmEl.textContent = '—';
             return;
@@ -94,6 +94,7 @@
                 `<td>${esc(r.userDisplay)}</td>` +
                 `<td>${formatDate(r.startTime)}</td>` +
                 `<td>${esc(r.lostDog)}</td>` +
+                `<td>${esc(r.activity || '—')}</td>` +
                 `<td>${formatTime(r.startTime)}</td>` +
                 `<td>${formatTime(r.endTime)}</td>` +
                 `<td>${dur}</td>` +
@@ -133,11 +134,12 @@
         if (allRecords.length === 0) { showToast('Keine Daten zum Exportieren', true); return; }
 
         const sep = ';';
-        const header = ['Helfer', 'Datum', 'Hund', 'Beginn', 'Ende', 'Dauer (min)', 'Km'].join(sep);
+        const header = ['Helfer', 'Datum', 'Hund', 'Tätigkeit', 'Beginn', 'Ende', 'Dauer (min)', 'Km'].join(sep);
         const rows = allRecords.map(r => [
             r.userDisplay,
             formatDate(r.startTime),
             r.lostDog,
+            r.activity || '',
             formatTime(r.startTime),
             formatTime(r.endTime),
             r.duration || 0,

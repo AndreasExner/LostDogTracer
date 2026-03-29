@@ -4,6 +4,7 @@
     const API_BASE = FT_AUTH.getApiBase();
 
     const dogSelectEl = document.getElementById('dogSelect');
+    const activitySelectEl = document.getElementById('activitySelect');
     const activeInfoEl = document.getElementById('activeInfo');
     const activeStartEl = document.getElementById('activeStart');
     const activeDogEl = document.getElementById('activeDog');
@@ -18,6 +19,7 @@
     const manualStartEl = document.getElementById('manualStart');
     const manualEndEl = document.getElementById('manualEnd');
     const manualKmDrivenEl = document.getElementById('manualKmDriven');
+    const manualActivityEl = document.getElementById('manualActivity');
     const manualSaveBtn = document.getElementById('manualSaveBtn');
     const toastEl = document.getElementById('toast');
     let toastTimeout = null;
@@ -59,6 +61,8 @@
                 isActive = true;
                 dogSelectEl.value = status.dog;
                 dogSelectEl.disabled = true;
+                if (status.activity) activitySelectEl.value = status.activity;
+                activitySelectEl.disabled = true;
                 activeInfoEl.classList.remove('hidden');
                 activeStartEl.textContent = formatDateTime(status.startTime);
                 activeDogEl.textContent = ' — ' + (dogSelectEl.selectedOptions[0]?.textContent || status.dog);
@@ -80,6 +84,7 @@
             } else {
                 isActive = false;
                 dogSelectEl.disabled = false;
+                activitySelectEl.disabled = false;
                 activeInfoEl.classList.add('hidden');
                 kmStartRow.classList.remove('hidden');
                 kmEndRow.classList.add('hidden');
@@ -106,6 +111,7 @@
         deployBtn.textContent = '⏳ Wird gestartet…';
 
         const payload = { dog };
+        if (activitySelectEl.value) payload.activity = activitySelectEl.value;
         if (kmStartCheck.checked && kmStartInput.value)
             payload.kmStart = parseInt(kmStartInput.value, 10);
 
@@ -183,6 +189,7 @@
             endTime: new Date(manualEndEl.value).toISOString()
         };
         if (manualKmDrivenEl.value) payload.kmDriven = parseInt(manualKmDrivenEl.value, 10);
+        if (manualActivityEl.value) payload.activity = manualActivityEl.value;
 
         try {
             const res = await fetch(`${API_BASE}/deployments`, {
@@ -200,6 +207,7 @@
             manualStartEl.value = '';
             manualEndEl.value = '';
             manualKmDrivenEl.value = '';
+            manualActivityEl.value = '';
             document.getElementById('manualPanel').open = false;
         } catch (err) {
             showToast(err.message || 'Fehler beim Speichern', true);

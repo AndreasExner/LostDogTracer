@@ -72,6 +72,18 @@
                 <select id="dogSelect"><option value="">Bitte wählen…</option></select>
             </div>
 
+            <div class="form-group">
+                <label for="activitySelect">Tätigkeit</label>
+                <select id="activitySelect">
+                    <option value="">— keine —</option>
+                    <option value="Flyern">Flyern</option>
+                    <option value="Futterstelle">Futterstelle</option>
+                    <option value="Falle">Falle</option>
+                    <option value="Sicherung">Sicherung</option>
+                    <option value="Sonstiges">Sonstiges</option>
+                </select>
+            </div>
+
             <div id="activeInfo" class="active-info hidden">
                 <strong>⏱️ Einsatz läuft</strong> seit <span id="activeStart"></span>
                 <span id="activeDog"></span>
@@ -120,6 +132,17 @@
                         <div class="form-group">
                             <label for="manualKmDriven">Gefahrene km</label>
                             <input type="number" id="manualKmDriven" placeholder="optional" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="manualActivity">Tätigkeit</label>
+                            <select id="manualActivity">
+                                <option value="">— keine —</option>
+                                <option value="Flyern">Flyern</option>
+                                <option value="Futterstelle">Futterstelle</option>
+                                <option value="Falle">Falle</option>
+                                <option value="Sicherung">Sicherung</option>
+                                <option value="Sonstiges">Sonstiges</option>
+                            </select>
                         </div>
                     </div>
                     <button class="btn btn-primary" id="manualSaveBtn" disabled>Eintrag speichern</button>

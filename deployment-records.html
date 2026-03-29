@@ -28,6 +28,7 @@
                     <tr>
                         <th><input type="checkbox" id="selectAll" title="Alle auswählen"></th>
                         <th>Hund</th>
+                        <th>Tätigkeit</th>
                         <th>Beginn</th>
                         <th>Ende</th>
                         <th>Dauer</th>
@@ -62,6 +63,16 @@
                     </label>
                     <label>Km Ankunft
                         <input type="number" id="editKmEnd" min="0">
+                    </label>
+                    <label>Tätigkeit
+                        <select id="editActivity">
+                            <option value="">— keine —</option>
+                            <option value="Flyern">Flyern</option>
+                            <option value="Futterstelle">Futterstelle</option>
+                            <option value="Falle">Falle</option>
+                            <option value="Sicherung">Sicherung</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                        </select>
                     </label>
                 </div>
                 <div class="edit-modal-actions" style="margin-top:1rem;display:flex;gap:0.5rem;">
