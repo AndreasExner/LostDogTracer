@@ -46,8 +46,9 @@ public class AuthFunction
             }
 
             var role = await _auth.GetUserRoleAsync(body.Username) ?? "User";
+            var accountant = await _auth.IsAccountantAsync(body.Username);
             _logger.LogInformation("Login successful: {User}", body.Username);
-            return new OkObjectResult(new { token, role });
+            return new OkObjectResult(new { token, role, accountant });
         }
         catch (Exception ex)
         {
@@ -69,13 +70,14 @@ public class AuthFunction
 
         var username = _auth.GetUsernameFromToken(req);
         var role = username != null ? await _auth.GetUserRoleAsync(username) ?? "User" : "User";
+        var accountant = username != null && await _auth.IsAccountantAsync(username);
         string? displayName = null;
         if (username != null)
         {
             var map = await _auth.GetUserDisplayNameMapAsync();
             displayName = map.GetValueOrDefault(username, username);
         }
-        return new OkObjectResult(new { valid = true, username, role, displayName = displayName ?? username });
+        return new OkObjectResult(new { valid = true, username, role, accountant, displayName = displayName ?? username });
     }
 
     [Function("ChangePassword")]

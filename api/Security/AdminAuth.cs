@@ -79,6 +79,19 @@ public class AdminAuth
         _seeded = true;
     }
 
+    /// <summary>Check if user has the Accountant flag.</summary>
+    public async Task<bool> IsAccountantAsync(string username)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        try
+        {
+            var entity = await table.GetEntityAsync<TableEntity>(Partition, username.ToLowerInvariant(),
+                select: new[] { "Accountant" });
+            return entity.Value.GetBoolean("Accountant") ?? false;
+        }
+        catch (Azure.RequestFailedException) { return false; }
+    }
+
     /// <summary>Look up the role for a given username (or null if not found).</summary>
     public async Task<string?> GetUserRoleAsync(string username)
     {
@@ -169,6 +182,7 @@ public class AdminAuth
                 username = entity.RowKey,
                 displayName = entity.GetString("DisplayName") ?? entity.RowKey,
                 role = entity.GetString("Role") ?? "User",
+                accountant = entity.GetBoolean("Accountant") ?? false,
                 location = entity.GetString("Location") ?? "",
                 latitude = entity.GetDouble("Latitude"),
                 longitude = entity.GetDouble("Longitude"),
@@ -274,7 +288,7 @@ public class AdminAuth
 
     /// <summary>Update role, displayName, and/or location for a user (admin action).</summary>
     public async Task<bool> UpdateUserAsync(string username, string? displayName, string? role,
-        string? location = null, double? latitude = null, double? longitude = null)
+        string? location = null, double? latitude = null, double? longitude = null, bool? accountant = null)
     {
         var table = _tableService.GetTableClient(TableName);
         var key = username.ToLowerInvariant();
@@ -298,6 +312,8 @@ public class AdminAuth
                 patch["Latitude"] = latitude.Value;
             if (longitude.HasValue)
                 patch["Longitude"] = longitude.Value;
+            if (accountant.HasValue)
+                patch["Accountant"] = accountant.Value;
             await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
             return true;
         }

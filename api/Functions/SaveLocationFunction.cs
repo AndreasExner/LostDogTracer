@@ -160,18 +160,6 @@ public class SaveLocationFunction
             if (!string.IsNullOrWhiteSpace(guestToken))
                 entity["GuestToken"] = guestToken.Trim();
 
-            // Resolve user location from Users table
-            try
-            {
-                var usersTable = _tableService.GetTableClient("Users");
-                var userEntity = await usersTable.GetEntityAsync<TableEntity>("users", name.ToLowerInvariant(),
-                    select: new[] { "Location" });
-                var userLocation = userEntity.Value.GetString("Location");
-                if (!string.IsNullOrWhiteSpace(userLocation))
-                    entity["Location"] = userLocation;
-            }
-            catch (Exception ex) { _logger.LogDebug(ex, "User location lookup skipped for {Name}", name); }
-
             await tableClient.AddEntityAsync(entity);
 
             _logger.LogInformation("Location saved: {Name} ({LostDog}) Photo:{HasPhoto}",

@@ -179,6 +179,7 @@ public class UsersFunction
     {
         public string? DisplayName { get; init; }
         public string? Role { get; init; }
+        public bool? Accountant { get; init; }
         public string? Location { get; init; }
         public double? Latitude { get; init; }
         public double? Longitude { get; init; }
@@ -202,13 +203,13 @@ public class UsersFunction
             var body = await JsonSerializer.DeserializeAsync<UpdateUserRequest>(req.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (body is null || (string.IsNullOrWhiteSpace(body.DisplayName) && string.IsNullOrWhiteSpace(body.Role)))
-                return new BadRequestObjectResult(new { error = "Anzeigename oder Rolle erforderlich" });
+            if (body is null || (string.IsNullOrWhiteSpace(body.DisplayName) && string.IsNullOrWhiteSpace(body.Role) && body.Accountant is null))
+                return new BadRequestObjectResult(new { error = "Anzeigename, Rolle oder Accountant erforderlich" });
 
             var sanitizedName = body.DisplayName is not null ? InputSanitizer.StripHtml(body.DisplayName) : null;
             var sanitizedLocation = body.Location is not null ? InputSanitizer.StripHtml(body.Location) : null;
             var ok = await _auth.UpdateUserAsync(username, sanitizedName, body.Role,
-                sanitizedLocation, body.Latitude, body.Longitude);
+                sanitizedLocation, body.Latitude, body.Longitude, body.Accountant);
             if (!ok)
                 return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
 

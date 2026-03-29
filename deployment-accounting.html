@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Abrechnung / Statistik</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Abrechnung / Statistik</h1>
+            <a href="deployments.html" class="btn-back">Zurück</a>
+        </div>
+
+        <div class="toolbar" style="flex-wrap:wrap;gap:0.5rem;">
+            <select id="filterUser" title="Filter nach Helfer">
+                <option value="">Alle Helfer</option>
+            </select>
+            <select id="filterDog" title="Filter nach Hund">
+                <option value="">Alle Hunde</option>
+            </select>
+            <input type="date" id="filterFrom" title="Von">
+            <input type="date" id="filterTo" title="Bis">
+            <button class="btn btn-secondary btn-sm" id="resetFiltersBtn">Filter zurücksetzen</button>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Helfer</th>
+                        <th class="sortable active" data-sort="date" id="sortDate">Datum ↓</th>
+                        <th>Hund</th>
+                        <th>Tätigkeit</th>
+                        <th>Beginn</th>
+                        <th>Ende</th>
+                        <th>Dauer</th>
+                        <th>Km</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody"></tbody>
+                <tfoot>
+                    <tr class="summary-row">
+                        <td colspan="6" style="text-align:right;font-weight:700;">Summe:</td>
+                        <td id="totalDuration" style="font-weight:700;">—</td>
+                        <td id="totalKm" style="font-weight:700;">—</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="toolbar" style="margin-top:0.75rem;">
+            <button class="btn btn-secondary btn-sm" id="exportCsvBtn">📄 CSV Export</button>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        FT_AUTH.requireRole(1);
+        if (!FT_AUTH.isAccountant()) location.href = 'deployments.html';
+    </script>
+    <script src="js/deployment-accounting.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+</html>

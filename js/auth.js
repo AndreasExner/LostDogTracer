@@ -44,6 +44,8 @@ const FT_AUTH = (function () {
                 try {
                     sessionStorage.setItem(TOKEN_KEY, data.token);
                     if (data.role) sessionStorage.setItem(ROLE_KEY, data.role);
+                    if (data.accountant) sessionStorage.setItem('lostdogtracer_accountant', '1');
+                    else sessionStorage.removeItem('lostdogtracer_accountant');
                     // Verify it was actually stored
                     if (!sessionStorage.getItem(TOKEN_KEY)) {
                         login._lastDebug = 'sessionStorage: Token konnte nicht gespeichert werden';
@@ -82,6 +84,7 @@ const FT_AUTH = (function () {
     function logout() {
         sessionStorage.removeItem(TOKEN_KEY);
         sessionStorage.removeItem(ROLE_KEY);
+        sessionStorage.removeItem('lostdogtracer_accountant');
     }
 
     /** Get cached role string */
@@ -120,7 +123,11 @@ const FT_AUTH = (function () {
 
     function getApiBase() { return API_BASE; }
 
-    return { publicHeaders, adminHeaders, login, isLoggedIn, logout, sessionExpired, getApiBase, getRole, getRoleLevel, requireRole };
+    function isAccountant() {
+        return sessionStorage.getItem('lostdogtracer_accountant') === '1';
+    }
+
+    return { publicHeaders, adminHeaders, login, isLoggedIn, logout, sessionExpired, getApiBase, getRole, getRoleLevel, requireRole, isAccountant };
 })();
 
 /* ── Password visibility toggle (delegated) ──────────────────── */
