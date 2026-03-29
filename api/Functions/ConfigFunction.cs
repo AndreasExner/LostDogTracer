@@ -55,8 +55,8 @@ public class ConfigFunction
                 doc3Label = entity.GetString("Doc3Label") ?? "",
                 doc3Link = entity.GetString("Doc3Link") ?? "",
                 debugLogin = string.Equals(entity.GetString("DebugLogin") ?? "", "true", StringComparison.OrdinalIgnoreCase),
-                featDeployment = entity.GetBoolean("FeatDeployment") ?? true,
-                featEquipment = entity.GetBoolean("FeatEquipment") ?? true
+                featDeployment = entity.GetBoolean("FeatDeployment") ?? !string.Equals(entity.GetString("FeatDeployment") ?? "true", "false", StringComparison.OrdinalIgnoreCase),
+                featEquipment = entity.GetBoolean("FeatEquipment") ?? !string.Equals(entity.GetString("FeatEquipment") ?? "true", "false", StringComparison.OrdinalIgnoreCase)
             });
         }
         catch (Exception ex)
