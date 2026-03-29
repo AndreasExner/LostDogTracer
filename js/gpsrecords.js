@@ -28,13 +28,14 @@
         // Hide checkbox column header
         const thCheckbox = selectAllEl?.closest('th');
         if (thCheckbox) thCheckbox.style.display = 'none';
-        // Hide action buttons, address panel, export
-        [deleteBtn, editBtn].forEach(el => { if (el) el.closest('.table-actions')?.remove(); });
+        // Hide action buttons, address panel, export, edit modal
+        const tableActions = document.querySelector('.table-actions');
+        if (tableActions) tableActions.style.display = 'none';
         const addressPanel = document.getElementById('addressPanel');
-        if (addressPanel) addressPanel.remove();
-        if (exportCsvBtn) exportCsvBtn.closest('.toolbar')?.remove();
+        if (addressPanel) addressPanel.style.display = 'none';
+        if (exportCsvBtn) exportCsvBtn.closest('.toolbar').style.display = 'none';
         const editModal = document.getElementById('editModal');
-        if (editModal) editModal.remove();
+        if (editModal) editModal.style.display = 'none';
     }
 
     // ── Category multi-select helpers ────────────────────────────
