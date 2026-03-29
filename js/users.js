@@ -71,15 +71,16 @@
             const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString('de-DE') : '—';
             const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('de-DE') : 'Nie';
             const role = u.role || 'User';
+            const acc = u.accountant ? ' · 📊 Accountant' : '';
             const loc = u.location ? ` · 📍 ${esc(u.location)}` : '';
-            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}','${esc(u.location || '')}',${u.latitude || 0},${u.longitude || 0})">Bearbeiten</button>` : '';
+            const editBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.editUser('${esc(u.username)}','${esc(u.displayName || u.username)}','${esc(role)}','${esc(u.location || '')}',${u.latitude || 0},${u.longitude || 0},${!!u.accountant})">Bearbeiten</button>` : '';
             const pwBtn = isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="AdminUsers.resetPw('${esc(u.username)}')">Kennwort</button>` : '';
             const delBtn = (isAdmin && !isSelf) ? `<button class="btn btn-sm" style="background:#ff3b30;color:#fff" onclick="AdminUsers.deleteUser('${esc(u.username)}','${esc(u.displayName || u.username)}')">Löschen</button>` : '';
             return `
             <div class="user-card">
                 <div class="user-info">
                     <strong>${esc(u.displayName || u.username)}</strong>
-                    <small>@${esc(u.username)} · ${esc(role)}${loc} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
+                    <small>@${esc(u.username)} · ${esc(role)}${acc}${loc} · Erstellt: ${created} · Letzter Login: ${lastLogin}</small>
                 </div>
                 <div class="user-actions">
                     ${editBtn}${pwBtn}${delBtn}
@@ -190,7 +191,7 @@
     };
     /* ── Edit user (role + displayName) ─────── */
     let editTarget = '';
-    AdminUsers.editUser = function (username, displayName, role, location, lat, lng) {
+    AdminUsers.editUser = function (username, displayName, role, location, lat, lng, accountant) {
         editTarget = username;
         document.getElementById('editUserName').textContent = username;
         document.getElementById('editDisplayName').value = displayName;
@@ -198,6 +199,7 @@
         document.getElementById('editUserLocation').value = location || '';
         document.getElementById('editUserLat').value = lat || '';
         document.getElementById('editUserLng').value = lng || '';
+        document.getElementById('editUserAccountant').checked = !!accountant;
         hideError('editUserError');
         openModal(editUserModal);
     };
@@ -213,6 +215,7 @@
             headers: { ...FT_AUTH.adminHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 displayName, role,
+                accountant: document.getElementById('editUserAccountant').checked,
                 location: document.getElementById('editUserLocation').value.trim() || null,
                 latitude: parseFloat(document.getElementById('editUserLat').value) || null,
                 longitude: parseFloat(document.getElementById('editUserLng').value) || null

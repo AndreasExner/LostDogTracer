@@ -40,8 +40,9 @@ jobs:
       - name: Inject build version
         run: |
           TOTAL_COMMITS=$(git rev-list --count HEAD)
-          VERSION_OFFSET=$((TOTAL_COMMITS))
+          VERSION_OFFSET=200
           COMMIT_COUNT=$((TOTAL_COMMITS - VERSION_OFFSET))
+          if [ $COMMIT_COUNT -lt 0 ]; then COMMIT_COUNT=0; fi
           SHORT_HASH=$(git rev-parse --short HEAD)
           BUILD_VERSION="v1.4.${COMMIT_COUNT}-${SHORT_HASH}"
           sed -i "s/%%BUILD_VERSION%%/${BUILD_VERSION}/g" js/nav.js
