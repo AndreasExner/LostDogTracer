@@ -33,7 +33,10 @@
 
     // Page links (filtered by role + feature flags)
     const currentFile = path.split('/').pop();
-    const cfg = window.FT_CONFIG;
+    var cfg = window.FT_CONFIG;
+    if (!cfg) {
+        try { var cached = sessionStorage.getItem('lostdogtracer_config'); if (cached) cfg = JSON.parse(cached); } catch {}
+    }
     pages.forEach(p => {
         if (roleLevel < (p.minRole || 1)) return;
         if (p.feat && cfg) {

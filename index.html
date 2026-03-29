@@ -178,14 +178,21 @@
         }
 
         function applyFeatureFlags() {
-            const cfg = window.FT_CONFIG;
+            var cfg = window.FT_CONFIG;
             if (!cfg) {
-                // Config not loaded yet — retry once after short delay
-                setTimeout(applyFeatureFlags, 500);
+                // Try sessionStorage cache (set by theme.js)
+                try {
+                    var cached = sessionStorage.getItem('lostdogtracer_config');
+                    if (cached) cfg = JSON.parse(cached);
+                } catch {}
+            }
+            if (!cfg) {
+                // Config not loaded yet — retry
+                setTimeout(applyFeatureFlags, 300);
                 return;
             }
-            if (cfg.featDeployment === false) document.querySelectorAll('[data-feat="deployment"]').forEach(el => el.style.display = 'none');
-            if (cfg.featEquipment === false) document.querySelectorAll('[data-feat="equipment"]').forEach(el => el.style.display = 'none');
+            if (cfg.featDeployment === false) document.querySelectorAll('[data-feat="deployment"]').forEach(function(el) { el.style.display = 'none'; });
+            if (cfg.featEquipment === false) document.querySelectorAll('[data-feat="equipment"]').forEach(function(el) { el.style.display = 'none'; });
         }
     })();
     </script>
