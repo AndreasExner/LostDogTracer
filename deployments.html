@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Einsatzzeiten</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .deployment-card {
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+        }
+        .deployment-card .form-group { margin-bottom: 1rem; }
+        .deployment-card label { display: block; font-weight: 600; margin-bottom: 0.35rem; font-size: 0.875rem; }
+        .deployment-card select, .deployment-card input[type="number"] {
+            width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary);
+        }
+        .deployment-card select:focus, .deployment-card input:focus {
+            border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); outline: none;
+        }
+        .km-row { display: flex; align-items: center; gap: 0.75rem; }
+        .km-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
+        .km-row input[type="number"] { flex: 1; }
+        .km-row label { margin-bottom: 0; font-weight: 400; }
+        .btn-deploy {
+            width: 100%; padding: 0.85rem; font-size: 1.1rem; font-weight: 700;
+            border: none; border-radius: 12px; cursor: pointer; margin-top: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-deploy.start { background: #34c759; color: #fff; }
+        .btn-deploy.start:hover { background: #2db84d; }
+        .btn-deploy.stop { background: #ff3b30; color: #fff; }
+        .btn-deploy.stop:hover { background: #e6342b; }
+        .btn-deploy:disabled { opacity: 0.5; cursor: default; }
+        .active-info {
+            background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px;
+            padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.875rem;
+        }
+        [data-theme="dark"] .active-info { background: #3a3000; border-color: #665500; }
+        .action-row { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        .action-row .btn { flex: 1; text-align: center; }
+        .manual-panel { margin-top: 1.25rem; }
+        .manual-panel summary { color: #1a7f37; font-weight: 600; cursor: pointer; }
+        .manual-form { margin-top: 0.75rem; }
+        .manual-form .form-group { margin-bottom: 0.75rem; }
+        .manual-form .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .manual-form input, .manual-form select {
+            width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 0.9rem; background: var(--bg-primary); color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Einsatzzeiten</h1>
+            <a href="index.html" class="btn-back">Zurück</a>
+        </div>
+
+        <div class="deployment-card">
+            <div class="form-group">
+                <label for="dogSelect">Hund</label>
+                <select id="dogSelect"><option value="">Bitte wählen…</option></select>
+            </div>
+
+            <div id="activeInfo" class="active-info hidden">
+                <strong>⏱️ Einsatz läuft</strong> seit <span id="activeStart"></span>
+                <span id="activeDog"></span>
+            </div>
+
+            <div id="kmStartRow" class="form-group hidden">
+                <div class="km-row">
+                    <input type="checkbox" id="kmStartCheck">
+                    <label for="kmStartCheck">Km-Stand bei Abfahrt</label>
+                </div>
+                <input type="number" id="kmStartInput" class="hidden" placeholder="z.B. 45230" min="0" step="1">
+            </div>
+
+            <div id="kmEndRow" class="form-group hidden">
+                <div class="km-row">
+                    <input type="checkbox" id="kmEndCheck">
+                    <label for="kmEndCheck">Km-Stand bei Ankunft</label>
+                </div>
+                <input type="number" id="kmEndInput" class="hidden" placeholder="z.B. 45280" min="0" step="1">
+            </div>
+
+            <button id="deployBtn" class="btn-deploy start" disabled>🚀 Einsatz starten</button>
+
+            <div class="action-row">
+                <a href="deployment-records.html" class="btn btn-secondary">📋 Meine Einsätze</a>
+            </div>
+
+            <!-- Manual entry -->
+            <details class="manual-panel" id="manualPanel">
+                <summary>📝 Manueller Eintrag</summary>
+                <div class="manual-form">
+                    <div class="form-group">
+                        <label for="manualDog">Hund</label>
+                        <select id="manualDog"><option value="">Bitte wählen…</option></select>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="manualStart">Beginn</label>
+                            <input type="datetime-local" id="manualStart">
+                        </div>
+                        <div class="form-group">
+                            <label for="manualEnd">Ende</label>
+                            <input type="datetime-local" id="manualEnd">
+                        </div>
+                        <div class="form-group">
+                            <label for="manualKmStart">Km Abfahrt</label>
+                            <input type="number" id="manualKmStart" placeholder="optional" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="manualKmEnd">Km Ankunft</label>
+                            <input type="number" id="manualKmEnd" placeholder="optional" min="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="manualSaveBtn" disabled>Eintrag speichern</button>
+                </div>
+            </details>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>FT_AUTH.requireRole(1);</script>
+    <script src="js/deployments.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+</html>

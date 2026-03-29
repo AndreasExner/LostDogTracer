@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>LostDogTracer – Meine Einsätze</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="site-banner">Hundesuchhilfe-Ostfriesland e.V.</div>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Meine Einsätze</h1>
+            <a href="deployments.html" class="btn-back">Zurück</a>
+        </div>
+
+        <div class="toolbar">
+            <select id="filterDog" title="Filter nach Hund">
+                <option value="">Alle Hunde</option>
+            </select>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Hund</th>
+                        <th>Beginn</th>
+                        <th>Ende</th>
+                        <th>Dauer</th>
+                        <th>Km</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Edit modal -->
+        <div id="editModal" class="edit-modal hidden">
+            <div class="edit-modal-content">
+                <h2>Einsatz bearbeiten</h2>
+                <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                    <label>Hund
+                        <select id="editDog"><option value="">—</option></select>
+                    </label>
+                    <label>Beginn
+                        <input type="datetime-local" id="editStart">
+                    </label>
+                    <label>Ende
+                        <input type="datetime-local" id="editEnd">
+                    </label>
+                    <label>Km Abfahrt
+                        <input type="number" id="editKmStart" min="0">
+                    </label>
+                    <label>Km Ankunft
+                        <input type="number" id="editKmEnd" min="0">
+                    </label>
+                </div>
+                <div class="edit-modal-actions" style="margin-top:1rem;display:flex;gap:0.5rem;">
+                    <button class="btn btn-primary" id="editSaveBtn">Speichern</button>
+                    <button class="btn btn-secondary" id="editCancelBtn">Abbrechen</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>FT_AUTH.requireRole(1);</script>
+    <script src="js/deployment-records.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/nav.js"></script>
+</body>
+</html>
