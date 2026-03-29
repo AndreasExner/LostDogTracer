@@ -130,8 +130,8 @@ public class ConfigFunction
         ["Doc3Label"] = "Admin Handbuch",
         ["Doc3Link"] = "docs/LostDogTracer-3-Admin_Handbuch.pdf",
         ["DebugLogin"] = "false",
-        ["FeatDeployment"] = true,
-        ["FeatEquipment"] = true
+        ["FeatDeployment"] = "true",
+        ["FeatEquipment"] = "true"
     };
 
     private async Task<TableEntity> GetOrSeedConfigAsync()
