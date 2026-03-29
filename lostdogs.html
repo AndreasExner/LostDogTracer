@@ -80,14 +80,20 @@
 
             <div style="margin-bottom:1rem;">
                 <p style="font-weight:600;font-size:0.875rem;margin:0 0 0.35rem;">👥 Helfer-Link (Gast)</p>
-                <p style="font-size:0.75rem;color:#6e6e73;margin:0 0 0.5rem;">Für freiwillige Helfer*innen, die Flyer aufhängen möchten.</p>
+                <p style="font-size:0.75rem;color:#6e6e73;margin:0 0 0.5rem;">Für freiwillige Helfer*innen, die Flyer aufhängen möchten. Hinweis: erzeugt beim Helfenden einen personalisierten Link. Es können nur Daten über Flyer Standorte eingesehen und angelegt werden.</p>
                 <button class="btn btn-secondary btn-sm" id="shareGuestCopy" style="width:100%;">📋 Helfer-Link kopieren</button>
             </div>
 
             <div style="border-top:1px solid #e8e8ed;padding-top:1rem;">
                 <p style="font-weight:600;font-size:0.875rem;margin:0 0 0.35rem;">🏠 Besitzer-Link</p>
-                <p style="font-size:0.75rem;color:#6e6e73;margin:0 0 0.5rem;">Für den Hundebesitzer. Zeigt alle Daten, kann eigene Flyer-Standorte eintragen.</p>
+                <p style="font-size:0.75rem;color:#6e6e73;margin:0 0 0.25rem;">Für Hundebesitzer*in.</p>
+                <p style="font-size:0.75rem;font-weight:700;color:#ff3b30;margin:0 0 0.25rem;padding:0.35rem 0.5rem;background:#fff0f0;border-radius:6px;">⚠️ Warnung: mit diesem Link können alle Standorte zu diesem Hund eingesehen werden!</p>
+                <p style="font-size:0.75rem;color:#6e6e73;margin:0 0 0.5rem;">Es können nur Flyer Standorte angelegt werden.</p>
                 <button class="btn btn-primary btn-sm" id="shareOwnerCopy" style="width:100%;">📋 Besitzer-Link erzeugen &amp; kopieren</button>
+                <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;font-size:0.75rem;cursor:pointer;">
+                    <input type="checkbox" id="shareOwnerRegenerate" style="width:16px;height:16px;"> Neuen Token erzeugen
+                </label>
+                <p style="font-size:0.7rem;color:#ff9500;margin:0.25rem 0 0;"><strong>Achtung!</strong> Diese Option macht den bisherigen Link ungültig!</p>
                 <p id="shareOwnerStatus" style="font-size:0.75rem;color:#34c759;margin:0.35rem 0 0;display:none;"></p>
             </div>
 

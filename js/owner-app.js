@@ -46,7 +46,7 @@
             return;
         }
 
-        greetingEl.textContent = `Hallo Besitzer von ${resolvedDogName}`;
+        greetingEl.textContent = `Hallo Besitzer*in von ${resolvedDogName}`;
 
         await loadFlyerCategory();
         updateButtonState();

@@ -165,6 +165,7 @@
         document.getElementById('shareGuestCopy').textContent = '📋 Helfer-Link kopieren';
         document.getElementById('shareOwnerCopy').textContent = '📋 Besitzer-Link erzeugen & kopieren';
         document.getElementById('shareOwnerStatus').style.display = 'none';
+        document.getElementById('shareOwnerRegenerate').checked = false;
         openModal(shareModal);
     }
 
@@ -184,11 +185,16 @@
     document.getElementById('shareOwnerCopy').addEventListener('click', async () => {
         const btn = document.getElementById('shareOwnerCopy');
         const status = document.getElementById('shareOwnerStatus');
+        const regenerate = document.getElementById('shareOwnerRegenerate').checked;
+
+        if (regenerate && !confirm('Bisherigen Besitzer-Link wirklich ungültig machen?')) return;
+
         btn.disabled = true;
         btn.textContent = '⏳ Wird erzeugt…';
 
         try {
-            const res = await fetch(`${API_BASE}/manage/lost-dogs/${encodeURIComponent(shareRowKey)}/owner-key`, {
+            const url = `${API_BASE}/manage/lost-dogs/${encodeURIComponent(shareRowKey)}/owner-key` + (regenerate ? '?force=true' : '');
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: FT_AUTH.adminHeaders()
             });

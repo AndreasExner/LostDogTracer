@@ -127,7 +127,8 @@
 
             records.forEach(r => {
                 if (!r.latitude || !r.longitude) return;
-                if (r.partitionKey === 'OWNER') r.name = 'Besitzer';
+                if (r.partitionKey === 'OWNER') r.name = 'Besitzer*in';
+                else if (r.partitionKey === 'GUEST') r.name = 'Gast';
 
                 const color = getDogColor(r.lostDog);
                 const marker = L.marker([r.latitude, r.longitude], { icon: colorIcon(color, r.category) });

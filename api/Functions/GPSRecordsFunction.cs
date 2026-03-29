@@ -286,6 +286,9 @@ public class GPSRecordsFunction
             await foreach (var e in catTable.QueryAsync<TableEntity>(select: new[] { "RowKey", "DisplayName", "Name" }))
                 catLookup[e.RowKey] = e.GetString("DisplayName") ?? e.GetString("Name") ?? e.RowKey;
 
+            // Resolve user display names
+            var userLookup = await _adminAuth.GetUserDisplayNameMapAsync();
+
             var tableClient = _tableService.GetTableClient("GPSRecords");
             await tableClient.CreateIfNotExistsAsync();
 
@@ -322,7 +325,7 @@ public class GPSRecordsFunction
                 {
                     partitionKey = entity.PartitionKey,
                     rowKey = entity.RowKey,
-                    name = entity.PartitionKey,
+                    name = userLookup.GetValueOrDefault(entity.PartitionKey, entity.PartitionKey),
                     lostDogKey,
                     lostDog = dogLookup.GetValueOrDefault(lostDogKey, lostDogKey),
                     latitude = GetDoubleSafe(entity, "Latitude"),

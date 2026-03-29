@@ -194,14 +194,15 @@ public class LostDogsFunction
             var entityResponse = await tableClient.GetEntityAsync<TableEntity>("lostdogs", rowKey);
             var entity = entityResponse.Value;
 
-            // Generate if not exists, otherwise return existing
+            // Generate if not exists (or force regenerate), otherwise return existing
             var ownerKey = entity.GetString("OwnerKey");
-            if (string.IsNullOrWhiteSpace(ownerKey))
+            var force = string.Equals(req.Query["force"].FirstOrDefault(), "true", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(ownerKey) || force)
             {
                 ownerKey = GenerateRandomSuffix(24);
                 entity["OwnerKey"] = ownerKey;
                 await tableClient.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
-                _logger.LogInformation("Owner key generated for dog {RowKey}", rowKey);
+                _logger.LogInformation("Owner key {Action} for dog {RowKey}", force ? "regenerated" : "generated", rowKey);
             }
 
             return new OkObjectResult(new { ownerKey });
