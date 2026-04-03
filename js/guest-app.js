@@ -1,18 +1,18 @@
 (function () {
     'use strict';
 
-    const API_BASE = FT_AUTH.getApiBase();
-    const API_KEY = FT_AUTH.getApiKey();
+    const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
+    const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';
     const STORAGE_KEY_CATEGORY = 'lostdogtracer_guest_category';
     const STORAGE_KEY_UUID = 'lostdogtracer_guest_uuid';
     const STORAGE_KEY_TOKEN = 'lostdogtracer_guest_token';
     const STORAGE_KEY_NICK = 'lostdogtracer_guest_nick';
 
-    // ── Read key + token + tenantId from URL ─────────────────────
+    // ── Read key + token from URL ────────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
     const guestKey = urlParams.get('key') || '';
     const urlToken = urlParams.get('token') || '';
-    const tenantId = urlParams.get('tenant') || '';
 
     const dogNameEl = document.getElementById('dogName');
     const categoryEl = document.getElementById('category');

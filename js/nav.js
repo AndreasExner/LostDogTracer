@@ -2,22 +2,21 @@
 (function () {
     // Inject on sub-pages and index.html menu page
     const path = location.pathname;
-    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|roles|equipment|deployments|deployment-records|deployment-accounting|maintenance|profile|docs)\.html$/i.test(path);
+    const isSubPage = /(?:gpsrecords|map|lostdogs|categories|users|equipment|deployments|deployment-records|deployment-accounting|maintenance|profile|docs)\.html$/i.test(path);
     const isHome = /index\.html$/i.test(path) || path === '/' || path.endsWith('/');
     if (!isSubPage && !isHome) return;
 
     const pages = [
-        { href: 'field-home.html', icon: '🚩', label: 'Erfassen', perm: 'gps.write' },
-        { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten', perm: 'gps.read' },
-        { href: 'deployments.html', icon: '⏱️', label: 'Einsatzzeiten', perm: 'deployments.own', feat: 'deployment' },
-        { href: 'equipment.html',  icon: '📷', label: 'Equipment', perm: 'equipment.read', feat: 'equipment' },
-        { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', perm: 'dogs.write' },
-        { href: 'categories.html', icon: '🏷️', label: 'Kategorien', perm: 'categories.write' },
-        { href: 'users.html',      icon: '🔑', label: 'Benutzer', perm: 'users.read' },
-        { href: 'roles.html',      icon: '🛡️', label: 'Rollen', perm: 'users.admin' },
-        { href: 'maintenance.html', icon: '🔧', label: 'Wartung', perm: 'maintenance.admin' },
-        { href: 'profile.html',    icon: '👤', label: 'Mein Profil' },
-        { href: 'docs.html',       icon: '📖', label: 'Dokumentation' },
+        { href: 'field-home.html', icon: '🚩', label: 'Erfassen', minRole: 1 },
+        { href: 'gpsrecords.html', icon: '📍', label: 'GPS-Daten', minRole: 1 },
+        { href: 'deployments.html', icon: '⏱️', label: 'Einsatzzeiten', minRole: 1, feat: 'deployment' },
+        { href: 'equipment.html',  icon: '📷', label: 'Equipment', minRole: 2, feat: 'equipment' },
+        { href: 'lostdogs.html',   icon: '🐕', label: 'Hunde', minRole: 3 },
+        { href: 'categories.html', icon: '🏷️', label: 'Kategorien', minRole: 4 },
+        { href: 'users.html',      icon: '🔑', label: 'Benutzer', minRole: 3 },
+        { href: 'maintenance.html', icon: '🔧', label: 'Wartung', minRole: 4 },
+        { href: 'profile.html',    icon: '👤', label: 'Mein Profil', minRole: 1 },
+        { href: 'docs.html',       icon: '📖', label: 'Dokumentation', minRole: 1 },
     ];
 
     const roleLevel = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getRoleLevel() : 1;
@@ -32,15 +31,14 @@
     // Home link
     drawer.innerHTML = `<a href="index.html"${isHome ? ' class="active"' : ''}><span class="nav-icon">🏠</span> Übersicht</a><div class="nav-divider"></div>`;
 
-    // Page links (filtered by permission + feature flags)
+    // Page links (filtered by role + feature flags)
     const currentFile = path.split('/').pop();
     var cfg = window.FT_CONFIG;
     if (!cfg) {
         try { var cached = sessionStorage.getItem('lostdogtracer_config'); if (cached) cfg = JSON.parse(cached); } catch {}
     }
     pages.forEach(p => {
-        // Permission check (skip if user lacks required permission)
-        if (p.perm && typeof FT_AUTH !== 'undefined' && !FT_AUTH.hasPermission(p.perm)) return;
+        if (roleLevel < (p.minRole || 1)) return;
         if (p.feat && cfg) {
             if (p.feat === 'deployment' && cfg.featDeployment === false) return;
             if (p.feat === 'equipment' && cfg.featEquipment === false) return;

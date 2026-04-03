@@ -1,241 +1,252 @@
-using System.Net;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Azure.Data.Tables;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using LostDogTracer.Api.Helpers;
 using LostDogTracer.Api.Security;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Logging;
 
 namespace LostDogTracer.Api.Functions;
 
 public class LostDogsFunction
 {
-    private readonly AdminAuth _auth;
-    private readonly ApiKeyValidator _apiKey;
-    private readonly RateLimitProvider _rateLimiter;
-    private readonly TenantTableFactory _tables;
+    private readonly TableServiceClient _tableService;
     private readonly ILogger<LostDogsFunction> _logger;
+    private readonly ApiKeyValidator _apiKey;
+    private readonly AdminAuth _adminAuth;
+    private readonly RateLimitProvider _rateLimit;
 
-    public LostDogsFunction(AdminAuth auth, ApiKeyValidator apiKey, RateLimitProvider rateLimiter,
-        TenantTableFactory tables, ILogger<LostDogsFunction> logger)
+    public LostDogsFunction(TableServiceClient tableService, ILogger<LostDogsFunction> logger,
+        ApiKeyValidator apiKey, AdminAuth adminAuth, RateLimitProvider rateLimit)
     {
-        _auth = auth;
-        _apiKey = apiKey;
-        _rateLimiter = rateLimiter;
-        _tables = tables;
+        _tableService = tableService;
         _logger = logger;
+        _apiKey = apiKey;
+        _adminAuth = adminAuth;
+        _rateLimit = rateLimit;
     }
 
-    // Public: sorted list for dropdowns (tenantId from query)
     [Function("GetLostDogs")]
-    public async Task<HttpResponseData> GetLostDogs(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs")] HttpRequestData req)
+    public async Task<IActionResult> GetLostDogs(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs")] HttpRequest req)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Read);
-        if (rateError is not null) return rateError;
-
-        var tenantId = req.GetQueryParam("tenantId");
-        if (string.IsNullOrWhiteSpace(tenantId))
-        {
-            var (ctx, _) = req.ValidateToken(_auth);
-            if (ctx is not null) tenantId = ctx.TenantId;
-        }
-        if (string.IsNullOrWhiteSpace(tenantId))
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "tenantId ist erforderlich.");
-
         try
         {
-            var table = _tables.GetTableClient(tenantId, "LostDogs");
-            var items = new List<(string rowKey, string displayName)>();
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
 
-            await foreach (var entity in table.QueryAsync<TableEntity>())
+            var items = new List<(string rowKey, string display, string displayName, string suffix)>();
+
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                var displayName = entity.GetString("DisplayName") ?? entity.RowKey;
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
+                var suffix = entity.GetString("Suffix") ?? "";
                 if (!string.IsNullOrWhiteSpace(displayName))
-                    items.Add((entity.RowKey, displayName));
+                {
+                    var display = string.IsNullOrEmpty(suffix) ? displayName : $"{displayName} ({suffix})";
+                    items.Add((entity.RowKey, display, displayName, suffix));
+                }
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
-            items.Sort((a, b) => comparer.Compare(a.displayName, b.displayName));
-            return req.CreateJsonResponse(HttpStatusCode.OK, items.Select(i => new { rowKey = i.rowKey, displayName = i.displayName }));
+            items.Sort((a, b) => comparer.Compare(a.display, b.display));
+
+            return new OkObjectResult(items.Select(i => new { rowKey = i.rowKey, displayName = i.displayName }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading lost dogs");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("GetLostDogByKey")]
-    public async Task<HttpResponseData> GetLostDogByKey(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs/by-key/{key}")] HttpRequestData req, string key)
+    public async Task<IActionResult> GetLostDogByKey(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs/by-key/{key}")] HttpRequest req,
+        string key)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Read);
-        if (rateError is not null) return rateError;
-
-        var tenantId = req.GetQueryParam("tenantId");
-        if (string.IsNullOrWhiteSpace(tenantId))
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "tenantId ist erforderlich.");
-        if (string.IsNullOrWhiteSpace(key) || key.Length != 6)
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Ungültiger Key.");
-
         try
         {
-            var table = _tables.GetTableClient(tenantId, "LostDogs");
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+
+            if (string.IsNullOrWhiteSpace(key) || key.Length != 6)
+                return new NotFoundObjectResult(new { error = "Ungültiger Key" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
+
             var filter = $"Suffix eq '{key.Replace("'", "''")}'";
-            await foreach (var entity in table.QueryAsync<TableEntity>(filter))
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(filter))
             {
-                return req.CreateJsonResponse(HttpStatusCode.OK, new
-                {
-                    displayName = entity.GetString("DisplayName") ?? entity.RowKey,
-                    rowKey = entity.RowKey
-                });
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
+                return new OkObjectResult(new { displayName, rowKey = entity.RowKey });
             }
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Hund nicht gefunden.");
+
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error looking up dog by key");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            _logger.LogError(ex, "Error looking up lost dog by key {Key}", key);
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("GetLostDogByOwnerKey")]
-    public async Task<HttpResponseData> GetLostDogByOwnerKey(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs/by-owner-key/{key}")] HttpRequestData req, string key)
+    public async Task<IActionResult> GetLostDogByOwnerKey(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "lost-dogs/by-owner-key/{key}")] HttpRequest req,
+        string key)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Read);
-        if (rateError is not null) return rateError;
-
-        var tenantId = req.GetQueryParam("tenantId");
-        if (string.IsNullOrWhiteSpace(tenantId))
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "tenantId ist erforderlich.");
-        if (string.IsNullOrWhiteSpace(key) || key.Length < 16)
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Ungültiger Key.");
-
         try
         {
-            var table = _tables.GetTableClient(tenantId, "LostDogs");
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+
+            if (string.IsNullOrWhiteSpace(key) || key.Length < 16)
+                return new NotFoundObjectResult(new { error = "Ungültiger Key" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
+
             var filter = $"OwnerKey eq '{key.Replace("'", "''")}'";
-            await foreach (var entity in table.QueryAsync<TableEntity>(filter))
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>(filter))
             {
-                return req.CreateJsonResponse(HttpStatusCode.OK, new
-                {
-                    displayName = entity.GetString("DisplayName") ?? entity.RowKey,
-                    rowKey = entity.RowKey
-                });
+                var displayName = entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey;
+                return new OkObjectResult(new { displayName, rowKey = entity.RowKey });
             }
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Hund nicht gefunden.");
+
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error looking up dog by owner key");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            _logger.LogError(ex, "Error looking up lost dog by owner key");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("GetLostDogsAdmin")]
-    public async Task<HttpResponseData> GetLostDogsAdmin(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "manage/lost-dogs")] HttpRequestData req)
+    public async Task<IActionResult> GetLostDogsAdmin(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "manage/lost-dogs")] HttpRequest req)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Read);
-        if (rateError is not null) return rateError;
-        var (ctx, _, permError) = await req.RequirePermissionAsync(_auth, "dogs.read");
-        if (ctx is null) return permError!;
-
         try
         {
-            var table = _tables.GetTableClient(ctx.TenantId, "LostDogs");
-            var items = new List<(string pk, string rk, string displayName, string suffix)>();
-            await foreach (var entity in table.QueryAsync<TableEntity>())
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Read.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
+
+            var items = new List<(string partitionKey, string rowKey, string displayName, string suffix)>();
+            await foreach (var entity in tableClient.QueryAsync<TableEntity>())
             {
-                items.Add((entity.PartitionKey, entity.RowKey,
-                    entity.GetString("DisplayName") ?? entity.RowKey,
-                    entity.GetString("Suffix") ?? ""));
+                items.Add((
+                    entity.PartitionKey,
+                    entity.RowKey,
+                    entity.GetString("DisplayName") ?? entity.GetString("Location") ?? entity.RowKey,
+                    entity.GetString("Suffix") ?? ""
+                ));
             }
 
             var comparer = StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false);
             items.Sort((a, b) => comparer.Compare(a.displayName, b.displayName));
-            return req.CreateJsonResponse(HttpStatusCode.OK,
-                items.Select(i => new { partitionKey = i.pk, rowKey = i.rk, displayName = i.displayName, suffix = i.suffix }));
+
+            return new OkObjectResult(items.Select(i => new { i.partitionKey, i.rowKey, i.displayName, i.suffix }));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading lost dogs (admin)");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("GenerateOwnerKey")]
-    public async Task<HttpResponseData> GenerateOwnerKey(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/lost-dogs/{rowKey}/owner-key")] HttpRequestData req, string rowKey)
+    public async Task<IActionResult> GenerateOwnerKey(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/lost-dogs/{rowKey}/owner-key")] HttpRequest req,
+        string rowKey)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Write);
-        if (rateError is not null) return rateError;
-        var (ctx, _, permError) = await req.RequirePermissionAsync(_auth, "dogs.owner");
-        if (ctx is null) return permError!;
-
         try
         {
-            var table = _tables.GetTableClient(ctx.TenantId, "LostDogs");
-            var entityResponse = await table.GetEntityAsync<TableEntity>("lostdogs", rowKey);
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            var entityResponse = await tableClient.GetEntityAsync<TableEntity>("lostdogs", rowKey);
             var entity = entityResponse.Value;
 
+            // Generate if not exists (or force regenerate), otherwise return existing
             var ownerKey = entity.GetString("OwnerKey");
-            var force = string.Equals(req.GetQueryParam("force"), "true", StringComparison.OrdinalIgnoreCase);
+            var force = string.Equals(req.Query["force"].FirstOrDefault(), "true", StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrWhiteSpace(ownerKey) || force)
             {
                 ownerKey = GenerateRandomSuffix(24);
                 entity["OwnerKey"] = ownerKey;
-                await table.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
+                await tableClient.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
+                _logger.LogInformation("Owner key {Action} for dog {RowKey}", force ? "regenerated" : "generated", rowKey);
             }
-            return req.CreateJsonResponse(HttpStatusCode.OK, new { ownerKey });
+
+            return new OkObjectResult(new { ownerKey });
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
         {
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Hund nicht gefunden.");
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating owner key");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("CreateLostDog")]
-    public async Task<HttpResponseData> CreateLostDog(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/lost-dogs")] HttpRequestData req)
+    public async Task<IActionResult> CreateLostDog(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "manage/lost-dogs")] HttpRequest req)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Write);
-        if (rateError is not null) return rateError;
-        var (ctx, _, permError) = await req.RequirePermissionAsync(_auth, "dogs.write");
-        if (ctx is null) return permError!;
-
-        var (body, bodyError) = await req.ReadJsonBodyAsync<CreateDogRequest>();
-        if (body is null) return bodyError!;
-
-        if (string.IsNullOrWhiteSpace(body.Name))
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Name darf nicht leer sein.");
-
         try
         {
-            var table = _tables.GetTableClient(ctx.TenantId, "LostDogs");
-            var trimmedName = body.Name.Trim();
-            var location = body.Location?.Trim() ?? "";
-            var displayName = string.IsNullOrEmpty(location) ? trimmedName : $"{trimmedName}, {location}";
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+
+            var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
+            var name = body.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+            var location = body.TryGetProperty("location", out var locProp) ? locProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(name))
+                return new BadRequestObjectResult(new { error = "Name darf nicht leer sein" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.CreateIfNotExistsAsync();
+
+            var trimmedName = name.Trim();
+            var trimmedLocation = location?.Trim() ?? "";
+            var displayName = string.IsNullOrEmpty(trimmedLocation) ? trimmedName : $"{trimmedName}, {trimmedLocation}";
+
+            // Generate cryptographically random 6-char alphanumeric suffix
             var suffix = GenerateRandomSuffix(6);
             var rowKey = $"{trimmedName}_{suffix}";
 
@@ -244,77 +255,82 @@ public class LostDogsFunction
                 { "DisplayName", displayName },
                 { "Suffix", suffix }
             };
-            await table.AddEntityAsync(entity);
-            return req.CreateJsonResponse(HttpStatusCode.Created, new { partitionKey = "lostdogs", rowKey, displayName, suffix });
+
+            await tableClient.AddEntityAsync(entity);
+            _logger.LogInformation("Lost dog created: {DisplayName} ({Suffix})", displayName, suffix);
+
+            return new CreatedResult("", new { partitionKey = "lostdogs", rowKey, displayName, suffix });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating lost dog");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("UpdateLostDog")]
-    public async Task<HttpResponseData> UpdateLostDog(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "manage/lost-dogs/{rowKey}")] HttpRequestData req, string rowKey)
+    public async Task<IActionResult> UpdateLostDog(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "manage/lost-dogs/{rowKey}")] HttpRequest req,
+        string rowKey)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Write);
-        if (rateError is not null) return rateError;
-        var (ctx, _, permError) = await req.RequirePermissionAsync(_auth, "dogs.write");
-        if (ctx is null) return permError!;
-
-        var (body, bodyError) = await req.ReadJsonBodyAsync<UpdateDogRequest>();
-        if (body is null) return bodyError!;
-
-        if (string.IsNullOrWhiteSpace(body.DisplayName))
-            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Anzeigename darf nicht leer sein.");
-
         try
         {
-            var table = _tables.GetTableClient(ctx.TenantId, "LostDogs");
-            var entity = (await table.GetEntityAsync<TableEntity>("lostdogs", rowKey)).Value;
-            entity["DisplayName"] = body.DisplayName.Trim();
-            await table.UpdateEntityAsync(entity, entity.ETag, TableUpdateMode.Replace);
-            return req.CreateJsonResponse(HttpStatusCode.OK, new { message = "Aktualisiert." });
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+
+            var body = await JsonSerializer.DeserializeAsync<JsonElement>(req.Body);
+            var displayName = body.TryGetProperty("displayName", out var dnProp) ? dnProp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                return new BadRequestObjectResult(new { error = "Anzeigename darf nicht leer sein" });
+
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            var entity = await tableClient.GetEntityAsync<TableEntity>("lostdogs", rowKey);
+            entity.Value["DisplayName"] = displayName.Trim();
+            await tableClient.UpdateEntityAsync(entity.Value, entity.Value.ETag, TableUpdateMode.Replace);
+
+            _logger.LogInformation("Lost dog updated: RowKey={RowKey}", rowKey);
+            return new OkObjectResult(new { message = "Aktualisiert" });
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
         {
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Hund nicht gefunden.");
+            return new NotFoundObjectResult(new { error = "Hund nicht gefunden" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating lost dog");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
     [Function("DeleteLostDog")]
-    public async Task<HttpResponseData> DeleteLostDog(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "manage/lost-dogs/{rowKey}")] HttpRequestData req, string rowKey)
+    public async Task<IActionResult> DeleteLostDog(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "manage/lost-dogs/{rowKey}")] HttpRequest req,
+        string rowKey)
     {
-        var keyError = req.ValidateApiKey(_apiKey);
-        if (keyError is not null) return keyError;
-        var rateError = req.CheckRateLimit(_rateLimiter.Write);
-        if (rateError is not null) return rateError;
-        var (ctx, _, permError) = await req.RequirePermissionAsync(_auth, "dogs.write");
-        if (ctx is null) return permError!;
-
         try
         {
-            var table = _tables.GetTableClient(ctx.TenantId, "LostDogs");
-            await table.DeleteEntityAsync("lostdogs", rowKey);
-            return req.CreateJsonResponse(HttpStatusCode.OK, new { message = "Gelöscht." });
-        }
-        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
-        {
-            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Hund nicht gefunden.");
+            if (!_apiKey.IsValid(req))
+                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
+            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (!_rateLimit.Write.IsAllowed(ip))
+                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+            if (await _adminAuth.ValidateTokenWithRole(req, 3) == 0)
+                return AdminAuth.Forbidden();
+            var tableClient = _tableService.GetTableClient("LostDogs");
+            await tableClient.DeleteEntityAsync("lostdogs", rowKey);
+            _logger.LogInformation("Lost dog deleted: RowKey={RowKey}", rowKey);
+            return new OkObjectResult(new { message = "Gelöscht" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting lost dog");
-            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+            return new StatusCodeResult(500);
         }
     }
 
@@ -323,7 +339,4 @@ public class LostDogsFunction
         const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
         return RandomNumberGenerator.GetString(chars, length);
     }
-
-    private record CreateDogRequest(string? Name, string? Location);
-    private record UpdateDogRequest(string? DisplayName);
 }

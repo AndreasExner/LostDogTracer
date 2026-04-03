@@ -1,81 +1,64 @@
 using System.Security.Cryptography;
 using System.Text;
 using Azure.Data.Tables;
-using LostDogTracer.Api.Helpers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LostDogTracer.Api.Security;
 
 /// <summary>
-/// Result of a successful token validation.
-/// </summary>
-public record AuthContext(string TenantId, string Username);
-
-/// <summary>
-/// Successful login result.
-/// </summary>
-public record LoginResult(
-    string Token,
-    string[] Permissions,
-    string DisplayName,
-    string RoleName,
-    string RoleId);
-
-/// <summary>
-/// Multi-tenant user authentication against Azure Table Storage.
-/// - Token format: base64({tenantId}|{username}|{expiry}|{hmac-signature})
-/// - Seeds default admin user + roles on first use per tenant.
-/// - Stateless tokens — no server-side session storage.
+/// User authentication against a Users Azure Table.
+/// - Login validates username/password via PBKDF2 hash.
+/// - Issues HMAC-signed stateless tokens (configurable lifetime).
+/// - Seeds a default admin user on first use if the table is empty.
 /// </summary>
 public class AdminAuth
 {
-    private const string UserPartition = "users";
+    private const string TableName = "Users";
+    private const string Partition = "users";
 
-    private readonly TenantTableFactory _tables;
-    private readonly PermissionChecker _permissionChecker;
+    public static readonly string[] ValidRoles = { "User", "PowerUser", "Manager", "Administrator" };
+
+    public static int GetRoleLevel(string? role) => role switch
+    {
+        "Administrator" => 4,
+        "Manager" => 3,
+        "PowerUser" => 2,
+        "User" => 1,
+        _ => 0
+    };
+
+    /// <summary>Returns 403 Forbidden result for insufficient role.</summary>
+    public static IActionResult Forbidden() =>
+        new ObjectResult(new { error = "Keine Berechtigung für diese Aktion." }) { StatusCode = 403 };
+
+    private readonly TableServiceClient _tableService;
     private readonly byte[] _tokenSecret;
     private readonly TimeSpan _tokenLifetime;
     private readonly string _seedUsername;
     private readonly string _seedPassword;
+    private bool _seeded;
 
-    private readonly HashSet<string> _seededTenants = new();
-    private readonly object _seedLock = new();
-
-    public AdminAuth(
-        TenantTableFactory tables,
-        PermissionChecker permissionChecker,
-        string tokenSecret,
-        string seedUsername,
-        string seedPassword,
-        TimeSpan? tokenLifetime = null)
+    public AdminAuth(TableServiceClient tableService, string tokenSecret,
+        string seedUsername, string seedPassword, TimeSpan? tokenLifetime = null)
     {
-        _tables = tables;
-        _permissionChecker = permissionChecker;
+        _tableService = tableService;
         _tokenSecret = Encoding.UTF8.GetBytes(tokenSecret);
         _tokenLifetime = tokenLifetime ?? TimeSpan.FromHours(24);
         _seedUsername = seedUsername;
         _seedPassword = seedPassword;
     }
 
-    // ── Seed ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Ensure tables exist and seed default admin + roles for a tenant.
-    /// Idempotent — skips if already seeded this instance lifetime.
-    /// </summary>
-    public async Task EnsureSeededAsync(string tenantId)
+    /// <summary>Ensure table exists and seed default admin if empty.</summary>
+    public async Task EnsureSeededAsync()
     {
-        lock (_seedLock)
-        {
-            if (_seededTenants.Contains(tenantId)) return;
-        }
+        if (_seeded) return;
+        var table = _tableService.GetTableClient(TableName);
+        await table.CreateIfNotExistsAsync();
 
-        await _tables.EnsureTablesExistAsync(tenantId);
-        await _permissionChecker.SeedDefaultRolesAsync(tenantId);
-
-        var usersTable = _tables.GetTableClient(tenantId, "Users");
+        // Check if any admin exists
         bool hasUsers = false;
-        await foreach (var _ in usersTable.QueryAsync<TableEntity>(
-            filter: $"PartitionKey eq '{UserPartition}'",
+        await foreach (var _ in table.QueryAsync<TableEntity>(filter: $"PartitionKey eq '{Partition}'",
             maxPerPage: 1, select: new[] { "RowKey" }))
         {
             hasUsers = true;
@@ -84,204 +67,413 @@ public class AdminAuth
 
         if (!hasUsers)
         {
-            var entity = new TableEntity(UserPartition, _seedUsername.ToLowerInvariant())
+            var entity = new TableEntity(Partition, _seedUsername.ToLowerInvariant())
             {
                 { "DisplayName", _seedUsername },
                 { "PasswordHash", PasswordHasher.Hash(_seedPassword) },
-                { "RoleId", "admin" },
+                { "Role", "Administrator" },
                 { "CreatedAt", DateTimeOffset.UtcNow.ToString("o") }
             };
-            await usersTable.UpsertEntityAsync(entity);
+            await table.UpsertEntityAsync(entity);
         }
+        _seeded = true;
+    }
 
-        lock (_seedLock)
+    /// <summary>Check if user has the Accountant flag.</summary>
+    public async Task<bool> IsAccountantAsync(string username)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        try
         {
-            _seededTenants.Add(tenantId);
+            var entity = await table.GetEntityAsync<TableEntity>(Partition, username.ToLowerInvariant(),
+                select: new[] { "Accountant" });
+            return entity.Value.GetBoolean("Accountant") ?? false;
+        }
+        catch (Azure.RequestFailedException) { return false; }
+    }
+
+    /// <summary>Look up the role for a given username (or null if not found).</summary>
+    public async Task<string?> GetUserRoleAsync(string username)
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        try
+        {
+            var entity = await table.GetEntityAsync<TableEntity>(Partition, username.ToLowerInvariant());
+            return entity.Value.GetString("Role") ?? "User";
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
         }
     }
 
-    // ── Login ────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Validate credentials and return token + user info, or null on failure.
-    /// </summary>
-    public async Task<LoginResult?> LoginAsync(string tenantId, string username, string password)
+    /// <summary>Validate username + password against Users table, return signed token or null.</summary>
+    public async Task<string?> LoginAsync(string username, string password)
     {
-        await EnsureSeededAsync(tenantId);
-        var usersTable = _tables.GetTableClient(tenantId, "Users");
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
 
         try
         {
-            var entity = await usersTable.GetEntityAsync<TableEntity>(
-                UserPartition, username.ToLowerInvariant());
+            var entity = await table.GetEntityAsync<TableEntity>(Partition, username.ToLowerInvariant());
             var storedHash = entity.Value.GetString("PasswordHash");
             if (storedHash is null || !PasswordHasher.Verify(password, storedHash))
                 return null;
 
-            // Update LastLogin (merge — don't round-trip hash)
-            var patch = new TableEntity(UserPartition, username.ToLowerInvariant())
+            // Update only LastLogin (merge mode — don't round-trip PasswordHash)
+            var patch = new TableEntity(Partition, username.ToLowerInvariant())
             {
                 { "LastLogin", DateTimeOffset.UtcNow.ToString("o") }
             };
-            await usersTable.UpdateEntityAsync(patch, entity.Value.ETag, TableUpdateMode.Merge);
+            await table.UpdateEntityAsync(patch, entity.Value.ETag, TableUpdateMode.Merge);
 
-            var roleId = entity.Value.GetString("RoleId") ?? "helper";
-            var permissions = await _permissionChecker.GetRolePermissionsAsync(tenantId, roleId);
-            var displayName = entity.Value.GetString("DisplayName") ?? username;
-            var roleName = await GetRoleDisplayNameAsync(tenantId, roleId);
-            var token = CreateToken(tenantId, username.ToLowerInvariant());
-
-            return new LoginResult(token, permissions, displayName, roleName, roleId);
+            return CreateToken(username.ToLowerInvariant());
         }
         catch (Azure.RequestFailedException ex) when (ex.Status == 404)
         {
-            return null;
+            return null; // user not found
         }
     }
 
-    // ── Token validation ─────────────────────────────────────────
-
-    /// <summary>
-    /// Extract and validate token from request headers.
-    /// Returns AuthContext on success, null on failure.
-    /// </summary>
-    public AuthContext? ValidateToken(Microsoft.Azure.Functions.Worker.Http.HttpRequestData req)
+    /// <summary>Validate a Bearer token from the Authorization header.</summary>
+    public bool ValidateToken(HttpRequest req)
     {
-        var token = ExtractToken(req);
+        // Use custom header because SWA managed functions proxy strips Authorization header
+        var token = req.Headers["X-Admin-Token"].FirstOrDefault();
+        if (string.IsNullOrEmpty(token))
+        {
+            // Fallback: also check Authorization header (for local dev / standalone)
+            var authHeader = req.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                token = authHeader["Bearer ".Length..].Trim();
+        }
+        return !string.IsNullOrEmpty(token) && IsTokenValid(token);
+    }
+
+    /// <summary>Validate token AND check minimum role level. Returns role level (0 = invalid).</summary>
+    public async Task<int> ValidateTokenWithRole(HttpRequest req, int minLevel = 1)
+    {
+        if (!ValidateToken(req)) return 0;
+        var username = GetUsernameFromToken(req);
+        if (username is null) return 0;
+        var role = await GetUserRoleAsync(username);
+        var level = GetRoleLevel(role);
+        return level >= minLevel ? level : 0;
+    }
+
+    /// <summary>Returns 401 Unauthorized result.</summary>
+    public static IActionResult Unauthorized() =>
+        new UnauthorizedObjectResult(new { error = "Nicht autorisiert. Bitte zuerst anmelden." });
+
+    // ── Admin user management ────────────────────────────────────
+
+    public async Task<List<object>> GetUsersAsync()
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var users = new List<object>();
+
+        await foreach (var entity in table.QueryAsync<TableEntity>(
+            filter: $"PartitionKey eq '{Partition}'"))
+        {
+            users.Add(new
+            {
+                username = entity.RowKey,
+                displayName = entity.GetString("DisplayName") ?? entity.RowKey,
+                role = entity.GetString("Role") ?? "User",
+                accountant = entity.GetBoolean("Accountant") ?? false,
+                location = entity.GetString("Location") ?? "",
+                latitude = entity.GetDouble("Latitude"),
+                longitude = entity.GetDouble("Longitude"),
+                createdAt = entity.GetString("CreatedAt") ?? "",
+                lastLogin = entity.GetString("LastLogin") ?? ""
+            });
+        }
+        return users;
+    }
+
+    public async Task<bool> CreateUserAsync(string username, string displayName, string password, string role = "User")
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var key = username.ToLowerInvariant();
+
+        // Validate role
+        if (!ValidRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
+            role = "User";
+
+        // Check if exists
+        try
+        {
+            await table.GetEntityAsync<TableEntity>(Partition, key);
+            return false; // already exists
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404) { /* ok */ }
+
+        var entity = new TableEntity(Partition, key)
+        {
+            { "DisplayName", displayName.Trim() },
+            { "PasswordHash", PasswordHasher.Hash(password) },
+            { "Role", role },
+            { "CreatedAt", DateTimeOffset.UtcNow.ToString("o") }
+        };
+        await table.AddEntityAsync(entity);
+        return true;
+    }
+
+    public async Task<bool> ChangePasswordAsync(string username, string oldPassword, string newPassword)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        var key = username.ToLowerInvariant();
+
+        try
+        {
+            var entity = await table.GetEntityAsync<TableEntity>(Partition, key);
+            var storedHash = entity.Value.GetString("PasswordHash");
+            if (storedHash is null || !PasswordHasher.Verify(oldPassword, storedHash))
+                return false;
+
+            // Use merge patch to only update PasswordHash
+            var patch = new TableEntity(Partition, key)
+            {
+                { "PasswordHash", PasswordHasher.Hash(newPassword) }
+            };
+            await table.UpsertEntityAsync(patch, TableUpdateMode.Merge);
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> ResetPasswordAsync(string username, string newPassword)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        var key = username.ToLowerInvariant();
+
+        try
+        {
+            // Verify user exists
+            await table.GetEntityAsync<TableEntity>(Partition, key);
+
+            // Use merge patch to only update PasswordHash
+            var patch = new TableEntity(Partition, key)
+            {
+                { "PasswordHash", PasswordHasher.Hash(newPassword) }
+            };
+            await table.UpsertEntityAsync(patch, TableUpdateMode.Merge);
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteUserAsync(string username)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        try
+        {
+            await table.DeleteEntityAsync(Partition, username.ToLowerInvariant());
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Update role, displayName, and/or location for a user (admin action).</summary>
+    public async Task<bool> UpdateUserAsync(string username, string? displayName, string? role,
+        string? location = null, double? latitude = null, double? longitude = null, bool? accountant = null)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        var key = username.ToLowerInvariant();
+
+        try
+        {
+            await table.GetEntityAsync<TableEntity>(Partition, key);
+
+            var patch = new TableEntity(Partition, key);
+            if (!string.IsNullOrWhiteSpace(displayName))
+                patch["DisplayName"] = displayName.Trim();
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                if (!ValidRoles.Contains(role, StringComparer.OrdinalIgnoreCase))
+                    role = "User";
+                patch["Role"] = role;
+            }
+            if (location is not null)
+                patch["Location"] = location.Trim();
+            if (latitude.HasValue)
+                patch["Latitude"] = latitude.Value;
+            if (longitude.HasValue)
+                patch["Longitude"] = longitude.Value;
+            if (accountant.HasValue)
+                patch["Accountant"] = accountant.Value;
+            await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Update own display name (self-service).</summary>
+    public async Task<bool> UpdateDisplayNameAsync(string username, string displayName)
+    {
+        var table = _tableService.GetTableClient(TableName);
+        var key = username.ToLowerInvariant();
+
+        try
+        {
+            await table.GetEntityAsync<TableEntity>(Partition, key);
+            var patch = new TableEntity(Partition, key)
+            {
+                { "DisplayName", displayName.Trim() }
+            };
+            await table.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
+            return true;
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Return user objects with rowKey (username) and displayName for dropdowns.</summary>
+    public async Task<List<object>> GetUserNamesAsync()
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var items = new List<(string rowKey, string displayName)>();
+
+        await foreach (var entity in table.QueryAsync<TableEntity>(
+            filter: $"PartitionKey eq '{Partition}'",
+            select: new[] { "RowKey", "DisplayName" }))
+        {
+            var display = entity.GetString("DisplayName") ?? entity.RowKey;
+            if (!string.IsNullOrWhiteSpace(display))
+                items.Add((entity.RowKey, display));
+        }
+
+        items.Sort((a, b) => StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false).Compare(a.displayName, b.displayName));
+        return items.Select(i => (object)new { rowKey = i.rowKey, displayName = i.displayName }).ToList();
+    }
+
+    /// <summary>Return a map of username → displayName for FK resolution.</summary>
+    public async Task<Dictionary<string, string>> GetUserDisplayNameMapAsync()
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var map = new Dictionary<string, string>();
+
+        await foreach (var entity in table.QueryAsync<TableEntity>(
+            filter: $"PartitionKey eq '{Partition}'",
+            select: new[] { "RowKey", "DisplayName" }))
+        {
+            map[entity.RowKey] = entity.GetString("DisplayName") ?? entity.RowKey;
+        }
+        return map;
+    }
+
+    /// <summary>Return login usernames (RowKey), excluding "admin".</summary>
+    public async Task<List<string>> GetUserLoginNamesAsync()
+    {
+        await EnsureSeededAsync();
+        var table = _tableService.GetTableClient(TableName);
+        var names = new List<string>();
+
+        await foreach (var entity in table.QueryAsync<TableEntity>(
+            filter: $"PartitionKey eq '{Partition}'",
+            select: new[] { "RowKey" }))
+        {
+            var username = entity.RowKey;
+            if (!string.IsNullOrWhiteSpace(username) &&
+                !string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase))
+                names.Add(username);
+        }
+
+        names.Sort(StringComparer.Create(new System.Globalization.CultureInfo("de-DE"), false));
+        return names;
+    }
+
+    // ── Token creation & validation ──────────────────────────────
+
+    private string CreateToken(string username)
+    {
+        var expires = DateTimeOffset.UtcNow.Add(_tokenLifetime).ToUnixTimeSeconds();
+        var payload = $"{username}|{expires}";
+        var sig = Sign(payload);
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(payload))
+             + "."
+             + Convert.ToBase64String(sig);
+    }
+
+    /// <summary>Extract username from a valid token (or null).</summary>
+    public string? GetUsernameFromToken(HttpRequest req)
+    {
+        // Use custom header because SWA managed functions proxy strips Authorization header
+        var token = req.Headers["X-Admin-Token"].FirstOrDefault();
+        if (string.IsNullOrEmpty(token))
+        {
+            var authHeader = req.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                token = authHeader["Bearer ".Length..].Trim();
+        }
         if (string.IsNullOrEmpty(token)) return null;
-        return ParseAndValidateToken(token);
-    }
-
-    /// <summary>
-    /// Validate token + check that user has the required permission.
-    /// Returns (AuthContext, permissions) or null.
-    /// </summary>
-    public async Task<(AuthContext Context, string[] Permissions)?> ValidateWithPermissionAsync(
-        Microsoft.Azure.Functions.Worker.Http.HttpRequestData req, string requiredPermission)
-    {
-        var ctx = ValidateToken(req);
-        if (ctx is null) return null;
-
-        var permissions = await _permissionChecker.GetUserPermissionsAsync(ctx.TenantId, ctx.Username);
-        if (!PermissionChecker.HasPermission(permissions, requiredPermission))
-            return null;
-
-        return (ctx, permissions);
-    }
-
-    /// <summary>
-    /// Validate token and return full auth info (for /auth/verify).
-    /// </summary>
-    public async Task<(AuthContext Context, string[] Permissions, string RoleId, string RoleName, string DisplayName)?>
-        GetFullAuthInfoAsync(Microsoft.Azure.Functions.Worker.Http.HttpRequestData req)
-    {
-        var ctx = ValidateToken(req);
-        if (ctx is null) return null;
-
-        var usersTable = _tables.GetTableClient(ctx.TenantId, "Users");
+        if (token.Length > 512) return null; // Reject oversized tokens
         try
         {
-            var user = await usersTable.GetEntityAsync<TableEntity>(
-                UserPartition, ctx.Username,
-                select: new[] { "RoleId", "DisplayName" });
+            var parts = token.Split('.');
+            if (parts.Length != 2) return null;
 
-            var roleId = user.Value.GetString("RoleId") ?? "helper";
-            var displayName = user.Value.GetString("DisplayName") ?? ctx.Username;
-            var permissions = await _permissionChecker.GetRolePermissionsAsync(ctx.TenantId, roleId);
-            var roleName = await GetRoleDisplayNameAsync(ctx.TenantId, roleId);
+            var payload = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            var sig = Convert.FromBase64String(parts[1]);
 
-            return (ctx, permissions, roleId, roleName, displayName);
+            var expectedSig = Sign(payload);
+            if (!CryptographicOperations.FixedTimeEquals(sig, expectedSig)) return null;
+
+            var segments = payload.Split('|');
+            if (segments.Length != 2) return null;
+            if (!long.TryParse(segments[1], out var expires)) return null;
+            if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= expires) return null;
+
+            return segments[0];
         }
-        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
-        {
-            return null;
-        }
+        catch { return null; }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
-
-    private async Task<string> GetRoleDisplayNameAsync(string tenantId, string roleId)
+    private bool IsTokenValid(string token)
     {
+        if (token.Length > 512) return false; // Reject oversized tokens
         try
         {
-            var rolesTable = _tables.GetTableClient(tenantId, "Roles");
-            var role = await rolesTable.GetEntityAsync<TableEntity>("roles", roleId,
-                select: new[] { "DisplayName" });
-            return role.Value.GetString("DisplayName") ?? roleId;
+            var parts = token.Split('.');
+            if (parts.Length != 2) return false;
+
+            var payload = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+            var sig = Convert.FromBase64String(parts[1]);
+
+            var expectedSig = Sign(payload);
+            if (!CryptographicOperations.FixedTimeEquals(sig, expectedSig)) return false;
+
+            var segments = payload.Split('|');
+            if (segments.Length != 2) return false;
+            if (!long.TryParse(segments[1], out var expires)) return false;
+
+            return DateTimeOffset.UtcNow.ToUnixTimeSeconds() < expires;
         }
-        catch (Azure.RequestFailedException)
-        {
-            return roleId;
-        }
+        catch { return false; }
     }
 
-    // ── Token creation & parsing ─────────────────────────────────
-
-    private string CreateToken(string tenantId, string username)
-    {
-        var expiry = DateTimeOffset.UtcNow.Add(_tokenLifetime).ToUnixTimeSeconds();
-        var payload = $"{tenantId}|{username}|{expiry}";
-        var signature = ComputeSignature(payload);
-        return Convert.ToBase64String(Encoding.UTF8.GetBytes($"{payload}|{signature}"));
-    }
-
-    private AuthContext? ParseAndValidateToken(string token)
-    {
-        if (token.Length > 1024) return null;
-        try
-        {
-            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
-            var parts = decoded.Split('|');
-            if (parts.Length != 4) return null;
-
-            var tenantId = parts[0];
-            var username = parts[1];
-            var expiryStr = parts[2];
-            var signature = parts[3];
-
-            var payload = $"{tenantId}|{username}|{expiryStr}";
-            var expectedSig = ComputeSignature(payload);
-            if (!CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(signature),
-                Encoding.UTF8.GetBytes(expectedSig)))
-                return null;
-
-            if (!long.TryParse(expiryStr, out var expiry)) return null;
-            if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= expiry) return null;
-
-            return new AuthContext(tenantId, username);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private string ComputeSignature(string payload)
+    private byte[] Sign(string data)
     {
         using var hmac = new HMACSHA256(_tokenSecret);
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
-        return Convert.ToBase64String(hash);
-    }
-
-    private static string? ExtractToken(Microsoft.Azure.Functions.Worker.Http.HttpRequestData req)
-    {
-        if (req.Headers.TryGetValues("X-Admin-Token", out var tokenValues))
-        {
-            var token = tokenValues.FirstOrDefault();
-            if (!string.IsNullOrEmpty(token)) return token;
-        }
-
-        if (req.Headers.TryGetValues("Authorization", out var authValues))
-        {
-            var authHeader = authValues.FirstOrDefault();
-            if (!string.IsNullOrEmpty(authHeader) &&
-                authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            {
-                return authHeader["Bearer ".Length..].Trim();
-            }
-        }
-
-        return null;
+        return hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
     }
 }
