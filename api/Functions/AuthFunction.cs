@@ -1,195 +1,238 @@
-using System.Text.Json;
-using LostDogTracer.Api.Security;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using Azure.Data.Tables;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using LostDogTracer.Api.Helpers;
+using LostDogTracer.Api.Security;
 
 namespace LostDogTracer.Api.Functions;
 
+/// <summary>
+/// Authentication endpoints: login, verify, change password, update profile.
+/// </summary>
 public class AuthFunction
 {
     private readonly AdminAuth _auth;
     private readonly ApiKeyValidator _apiKey;
+    private readonly RateLimitProvider _rateLimiter;
+    private readonly TenantTableFactory _tables;
     private readonly ILogger<AuthFunction> _logger;
-    private readonly RateLimitProvider _rateLimit;
 
-    public AuthFunction(AdminAuth auth, ApiKeyValidator apiKey, ILogger<AuthFunction> logger, RateLimitProvider rateLimit)
+    public AuthFunction(AdminAuth auth, ApiKeyValidator apiKey,
+        RateLimitProvider rateLimiter, TenantTableFactory tables,
+        ILogger<AuthFunction> logger)
     {
         _auth = auth;
         _apiKey = apiKey;
+        _rateLimiter = rateLimiter;
+        _tables = tables;
         _logger = logger;
-        _rateLimit = rateLimit;
     }
 
-    [Function("AdminLogin")]
-    public async Task<IActionResult> Login(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/login")] HttpRequest req)
+    // ── POST /api/auth/login ─────────────────────────────────────
+
+    [Function("AuthLogin")]
+    public async Task<HttpResponseData> Login(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/login")] HttpRequestData req)
     {
+        var keyError = req.ValidateApiKey(_apiKey);
+        if (keyError is not null) return keyError;
+
+        var rateError = req.CheckRateLimit(_rateLimiter.Auth);
+        if (rateError is not null) return rateError;
+
+        var (body, bodyError) = await req.ReadJsonBodyAsync<LoginRequest>();
+        if (body is null) return bodyError!;
+
+        if (string.IsNullOrWhiteSpace(body.TenantId) ||
+            string.IsNullOrWhiteSpace(body.Username) ||
+            string.IsNullOrWhiteSpace(body.Password))
+        {
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest,
+                "tenantId, username und password sind erforderlich.");
+        }
+
         try
         {
-            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (!_rateLimit.Auth.IsAllowed(ip))
-                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-
-            var body = await JsonSerializer.DeserializeAsync<LoginRequest>(req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (body is null || string.IsNullOrWhiteSpace(body.Username) || string.IsNullOrWhiteSpace(body.Password))
-                return new BadRequestObjectResult(new { error = "Benutzername und Kennwort erforderlich" });
-
-            var token = await _auth.LoginAsync(body.Username, body.Password);
-            if (token is null)
+            var result = await _auth.LoginAsync(body.TenantId.Trim(), body.Username.Trim(), body.Password);
+            if (result is null)
             {
-                _logger.LogWarning("Failed login attempt for user: {User}", body.Username);
-                return new UnauthorizedObjectResult(new { error = "Benutzername oder Kennwort falsch" });
+                _logger.LogWarning("Failed login: {Tenant}/{User}", body.TenantId, body.Username);
+                return req.CreateErrorResponse(HttpStatusCode.Unauthorized,
+                    "Benutzername oder Passwort falsch.");
             }
 
-            var role = await _auth.GetUserRoleAsync(body.Username) ?? "User";
-            var accountant = await _auth.IsAccountantAsync(body.Username);
-            _logger.LogInformation("Login successful: {User}", body.Username);
-            return new OkObjectResult(new { token, role, accountant });
+            _logger.LogInformation("Login OK: {Tenant}/{User}", body.TenantId, body.Username);
+            return req.CreateJsonResponse(HttpStatusCode.OK, new
+            {
+                token = result.Token,
+                permissions = result.Permissions,
+                displayName = result.DisplayName,
+                roleName = result.RoleName,
+                roleId = result.RoleId
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest, ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login");
-            return new StatusCodeResult(500);
+            _logger.LogError(ex, "Login error for {Tenant}/{User}", body.TenantId, body.Username);
+            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
         }
     }
 
-    [Function("AdminVerify")]
-    public async Task<IActionResult> Verify(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "auth/verify")] HttpRequest req)
+    // ── GET /api/auth/verify ─────────────────────────────────────
+
+    [Function("AuthVerify")]
+    public async Task<HttpResponseData> Verify(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "auth/verify")] HttpRequestData req)
     {
-        var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        if (!_rateLimit.Read.IsAllowed(ip))
-            return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
+        var keyError = req.ValidateApiKey(_apiKey);
+        if (keyError is not null) return keyError;
 
-        if (!_auth.ValidateToken(req))
-            return AdminAuth.Unauthorized();
+        var rateError = req.CheckRateLimit(_rateLimiter.Read);
+        if (rateError is not null) return rateError;
 
-        var username = _auth.GetUsernameFromToken(req);
-        var role = username != null ? await _auth.GetUserRoleAsync(username) ?? "User" : "User";
-        var accountant = username != null && await _auth.IsAccountantAsync(username);
-        string? displayName = null;
-        if (username != null)
-        {
-            var map = await _auth.GetUserDisplayNameMapAsync();
-            displayName = map.GetValueOrDefault(username, username);
-        }
-        return new OkObjectResult(new { valid = true, username, role, accountant, displayName = displayName ?? username });
-    }
-
-    [Function("ChangePassword")]
-    public async Task<IActionResult> ChangePassword(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/change-password")] HttpRequest req)
-    {
         try
         {
-            if (!_apiKey.IsValid(req))
-                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
-            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (!_rateLimit.Write.IsAllowed(ip))
-                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_auth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            var info = await _auth.GetFullAuthInfoAsync(req);
+            if (info is null)
+                return req.CreateErrorResponse(HttpStatusCode.Unauthorized, "Token ungültig oder abgelaufen.");
 
-            var username = _auth.GetUsernameFromToken(req);
-            if (username is null) return AdminAuth.Unauthorized();
-
-            var body = await JsonSerializer.DeserializeAsync<ChangePasswordRequest>(req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (body is null || string.IsNullOrWhiteSpace(body.OldPassword) || string.IsNullOrWhiteSpace(body.NewPassword))
-                return new BadRequestObjectResult(new { error = "Altes und neues Kennwort erforderlich" });
-
-            if (body.NewPassword.Length < 8)
-                return new BadRequestObjectResult(new { error = "Neues Kennwort muss mindestens 8 Zeichen haben" });
-
-            var ok = await _auth.ChangePasswordAsync(username, body.OldPassword, body.NewPassword);
-            if (!ok)
-                return new BadRequestObjectResult(new { error = "Altes Kennwort ist falsch" });
-
-            _logger.LogWarning("Password changed for: {User}", username?.Replace("\n", "").Replace("\r", ""));
-            return new OkObjectResult(new { message = "Kennwort geändert" });
+            var (ctx, permissions, roleId, roleName, displayName) = info.Value;
+            return req.CreateJsonResponse(HttpStatusCode.OK, new
+            {
+                valid = true,
+                tenantId = ctx.TenantId,
+                username = ctx.Username,
+                permissions,
+                roleId,
+                roleName,
+                displayName
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error changing password");
-            return new StatusCodeResult(500);
+            _logger.LogError(ex, "Verify error");
+            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
         }
     }
 
-    private record LoginRequest
-    {
-        public string? Username { get; init; }
-        public string? Password { get; init; }
-    }
+    // ── POST /api/auth/change-password ───────────────────────────
 
-    private record ChangePasswordRequest
+    [Function("AuthChangePassword")]
+    public async Task<HttpResponseData> ChangePassword(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/change-password")] HttpRequestData req)
     {
-        public string? OldPassword { get; init; }
-        public string? NewPassword { get; init; }
-    }
+        var keyError = req.ValidateApiKey(_apiKey);
+        if (keyError is not null) return keyError;
 
-    private record UpdateProfileRequest
-    {
-        public string? DisplayName { get; init; }
-        public string? Location { get; init; }
-        public double? Latitude { get; init; }
-        public double? Longitude { get; init; }
-    }
+        var rateError = req.CheckRateLimit(_rateLimiter.Auth);
+        if (rateError is not null) return rateError;
 
-    [Function("UpdateProfile")]
-    public async Task<IActionResult> UpdateProfile(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/update-profile")] HttpRequest req)
-    {
+        var (authCtx, tokenError) = req.ValidateToken(_auth);
+        if (authCtx is null) return tokenError!;
+
+        var (body, bodyError) = await req.ReadJsonBodyAsync<ChangePasswordRequest>();
+        if (body is null) return bodyError!;
+
+        if (string.IsNullOrWhiteSpace(body.OldPassword) || string.IsNullOrWhiteSpace(body.NewPassword))
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Altes und neues Passwort erforderlich.");
+
+        if (body.NewPassword.Length < 8)
+            return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Passwort muss mindestens 8 Zeichen lang sein.");
+
         try
         {
-            if (!_apiKey.IsValid(req))
-                return new ObjectResult(new { error = "Ungültiger API-Key" }) { StatusCode = 403 };
-            var ip = req.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (!_rateLimit.Write.IsAllowed(ip))
-                return new ObjectResult(new { error = "Zu viele Anfragen. Bitte warten." }) { StatusCode = 429 };
-            if (!_auth.ValidateToken(req))
-                return AdminAuth.Unauthorized();
+            var usersTable = _tables.GetTableClient(authCtx.TenantId, "Users");
+            var entity = await usersTable.GetEntityAsync<TableEntity>("users", authCtx.Username);
+            var storedHash = entity.Value.GetString("PasswordHash");
 
-            var username = _auth.GetUsernameFromToken(req);
-            if (username is null) return AdminAuth.Unauthorized();
+            if (storedHash is null || !PasswordHasher.Verify(body.OldPassword, storedHash))
+                return req.CreateErrorResponse(HttpStatusCode.Unauthorized, "Altes Passwort ist falsch.");
 
-            var body = await JsonSerializer.DeserializeAsync<UpdateProfileRequest>(req.Body,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var patch = new TableEntity("users", authCtx.Username)
+            {
+                { "PasswordHash", PasswordHasher.Hash(body.NewPassword) }
+            };
+            await usersTable.UpsertEntityAsync(patch, TableUpdateMode.Merge);
 
-            if (body is null)
-                return new BadRequestObjectResult(new { error = "Keine Daten" });
+            _logger.LogInformation("Password changed: {Tenant}/{User}", authCtx.TenantId, authCtx.Username);
+            return req.CreateJsonResponse(HttpStatusCode.OK, new { message = "Passwort geändert." });
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Benutzer nicht gefunden.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Change password error for {User}", authCtx.Username);
+            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
+        }
+    }
 
-            bool updated = false;
+    // ── POST /api/auth/update-profile ────────────────────────────
+
+    [Function("AuthUpdateProfile")]
+    public async Task<HttpResponseData> UpdateProfile(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "auth/update-profile")] HttpRequestData req)
+    {
+        var keyError = req.ValidateApiKey(_apiKey);
+        if (keyError is not null) return keyError;
+
+        var rateError = req.CheckRateLimit(_rateLimiter.Write);
+        if (rateError is not null) return rateError;
+
+        var (authCtx, tokenError) = req.ValidateToken(_auth);
+        if (authCtx is null) return tokenError!;
+
+        var (body, bodyError) = await req.ReadJsonBodyAsync<UpdateProfileRequest>();
+        if (body is null) return bodyError!;
+
+        try
+        {
+            var usersTable = _tables.GetTableClient(authCtx.TenantId, "Users");
+            await usersTable.GetEntityAsync<TableEntity>("users", authCtx.Username);
+
+            var patch = new TableEntity("users", authCtx.Username);
+            bool hasUpdate = false;
 
             if (!string.IsNullOrWhiteSpace(body.DisplayName))
             {
-                var ok = await _auth.UpdateDisplayNameAsync(username, body.DisplayName);
-                if (!ok) return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
-                updated = true;
+                patch["DisplayName"] = InputSanitizer.StripHtml(body.DisplayName.Trim());
+                hasUpdate = true;
             }
-
             if (body.Location is not null)
             {
-                var ok = await _auth.UpdateUserAsync(username, null, null,
-                    body.Location, body.Latitude, body.Longitude);
-                if (!ok) return new NotFoundObjectResult(new { error = "Benutzer nicht gefunden" });
-                updated = true;
+                patch["Location"] = InputSanitizer.StripHtml(body.Location.Trim());
+                hasUpdate = true;
             }
+            if (body.Latitude.HasValue) { patch["Latitude"] = body.Latitude.Value; hasUpdate = true; }
+            if (body.Longitude.HasValue) { patch["Longitude"] = body.Longitude.Value; hasUpdate = true; }
 
-            if (!updated)
-                return new BadRequestObjectResult(new { error = "Keine Änderungen" });
+            if (!hasUpdate)
+                return req.CreateErrorResponse(HttpStatusCode.BadRequest, "Keine Änderungen angegeben.");
 
-            _logger.LogInformation("Profile updated for: {User}", username?.Replace("\n", "").Replace("\r", ""));
-            return new OkObjectResult(new { message = "Profil aktualisiert" });
+            await usersTable.UpdateEntityAsync(patch, Azure.ETag.All, TableUpdateMode.Merge);
+            return req.CreateJsonResponse(HttpStatusCode.OK, new { message = "Profil aktualisiert." });
+        }
+        catch (Azure.RequestFailedException ex) when (ex.Status == 404)
+        {
+            return req.CreateErrorResponse(HttpStatusCode.NotFound, "Benutzer nicht gefunden.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating profile");
-            return new StatusCodeResult(500);
+            _logger.LogError(ex, "Update profile error for {User}", authCtx.Username);
+            return req.CreateErrorResponse(HttpStatusCode.InternalServerError, "Interner Fehler.");
         }
     }
+
+    // ── Request DTOs ─────────────────────────────────────────────
+
+    private record LoginRequest(string? TenantId, string? Username, string? Password);
+    private record ChangePasswordRequest(string? OldPassword, string? NewPassword);
+    private record UpdateProfileRequest(string? DisplayName, string? Location, double? Latitude, double? Longitude);
 }

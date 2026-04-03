@@ -577,3 +577,40 @@ html, body {
 .lightbox.hidden {
     display: none;
 }
+
+/* ── Permission Grid (Roles page) ────────────────────────────── */
+.perm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.35rem 1rem;
+}
+.perm-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.2rem 0;
+}
+.perm-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #0071e3;
+    flex-shrink: 0;
+}
+.card-list .card {
+    background: var(--bg-secondary, #fff);
+    border: 1px solid var(--border-color, #d2d2d7);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+.btn-danger {
+    background: #ff3b30;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+.btn-danger:hover { background: #d63029; }

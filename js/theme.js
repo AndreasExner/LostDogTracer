@@ -65,8 +65,14 @@
             }
 
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const API_BASE = IS_LOCAL ? 'http://localhost:7071/api' : '/api';
-            const API_KEY = IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%';
+            const API_BASE = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getApiBase() : (IS_LOCAL ? 'http://localhost:7071/api' : '/api');
+            const API_KEY = (typeof FT_AUTH !== 'undefined') ? FT_AUTH.getApiKey() : (IS_LOCAL ? 'lostdogtracer-dev-key-2026' : '%%PROD_API_KEY%%');
+            // Get tenantId from session, URL param, or localStorage
+            var tenantId = '';
+            if (typeof FT_AUTH !== 'undefined') tenantId = FT_AUTH.getTenantId();
+            if (!tenantId) { try { tenantId = new URLSearchParams(window.location.search).get('tenant') || ''; } catch {} }
+            if (!tenantId) { try { tenantId = localStorage.getItem('lostdogtracer_last_tenant') || ''; } catch {} }
+
             const cached = sessionStorage.getItem('lostdogtracer_config');
             if (cached) {
                 const cfg = JSON.parse(cached);
@@ -75,7 +81,8 @@
                 window.FT_CONFIG = cfg;
                 return;
             }
-            const res = await fetch(`${API_BASE}/config`, { headers: { 'X-API-Key': API_KEY } });
+            if (!tenantId) return; // Cannot load config without tenantId
+            const res = await fetch(`${API_BASE}/config?tenantId=${encodeURIComponent(tenantId)}`, { headers: { 'X-API-Key': API_KEY } });
             if (res.ok) {
                 const cfg = await res.json();
                 sessionStorage.setItem('lostdogtracer_config', JSON.stringify(cfg));

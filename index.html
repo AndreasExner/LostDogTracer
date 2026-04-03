@@ -53,6 +53,7 @@
                 style="display: block; margin: 0 auto 1.25rem; max-width: 100%; height: auto; border-radius: 10px;"
             />
             <h2>🔐 Anmeldung</h2>
+            <input type="text" id="loginTenant" placeholder="Mandant (Tenant-ID)" autocomplete="organization">
             <input type="text" id="loginUser" placeholder="Benutzername" autocomplete="username">
             <div class="pw-wrap">
                 <input type="password" id="loginPass" placeholder="Kennwort" autocomplete="current-password">
@@ -71,47 +72,52 @@
         </div>
 
         <div class="menu-grid">
-            <a href="field-home.html" class="menu-card" data-min-role="1">
+            <a href="field-home.html" class="menu-card" data-perm="gps.write">
                 <span class="icon">🚩</span>
                 <span class="label">Erfassen</span>
                 <span class="desc">GPS-Standorte im Feld erfassen</span>
             </a>
-            <a href="gpsrecords.html" class="menu-card" data-min-role="1">
+            <a href="gpsrecords.html" class="menu-card" data-perm="gps.read">
                 <span class="icon">📍</span>
                 <span class="label">GPS-Daten</span>
                 <span class="desc">GPS-Aufzeichnungen anzeigen &amp; verwalten</span>
             </a>
-            <a href="deployments.html" class="menu-card" data-min-role="1" data-feat="deployment">
+            <a href="deployments.html" class="menu-card" data-perm="deployments.own" data-feat="deployment">
                 <span class="icon">⏱️</span>
                 <span class="label">Einsatzzeiten</span>
                 <span class="desc">Einsatzzeiten &amp; gefahrene km erfassen</span>
             </a>
-            <a href="equipment.html" class="menu-card" data-min-role="2" data-feat="equipment">
+            <a href="equipment.html" class="menu-card" data-perm="equipment.read" data-feat="equipment">
                 <span class="icon">📷</span>
                 <span class="label">Equipment</span>
                 <span class="desc">Kameras &amp; Fallen verwalten</span>
             </a>
-            <a href="lostdogs.html" class="menu-card" data-min-role="3">
+            <a href="lostdogs.html" class="menu-card" data-perm="dogs.write">
                 <span class="icon">🐕</span>
                 <span class="label">Hunde</span>
                 <span class="desc">Hundenamen verwalten</span>
             </a>
-            <a href="categories.html" class="menu-card" data-min-role="4">
+            <a href="categories.html" class="menu-card" data-perm="categories.write">
                 <span class="icon">🏷️</span>
                 <span class="label">Kategorien</span>
                 <span class="desc">GPS-Kategorien verwalten</span>
             </a>
-            <a href="users.html" class="menu-card" data-min-role="3">
+            <a href="users.html" class="menu-card" data-perm="users.read">
                 <span class="icon">🔑</span>
                 <span class="label">Benutzer</span>
                 <span class="desc">Benutzerkonten verwalten</span>
             </a>
-            <a href="maintenance.html" class="menu-card" data-min-role="4">
+            <a href="roles.html" class="menu-card" data-perm="users.admin">
+                <span class="icon">🛡️</span>
+                <span class="label">Rollen</span>
+                <span class="desc">Rollen &amp; Berechtigungen verwalten</span>
+            </a>
+            <a href="maintenance.html" class="menu-card" data-perm="maintenance.admin">
                 <span class="icon">🔧</span>
                 <span class="label">Wartung</span>
                 <span class="desc">Daten-Backup &amp; Wiederherstellung</span>
             </a>
-            <a href="profile.html" class="menu-card" data-min-role="1">
+            <a href="profile.html" class="menu-card">
                 <span class="icon">👤</span>
                 <span class="label">Mein Profil</span>
                 <span class="desc">Kennwort &amp; Anzeigename ändern</span>
@@ -125,9 +131,15 @@
         const loginSection = document.getElementById('loginSection');
         const menuSection = document.getElementById('menuSection');
         const loginBtn = document.getElementById('loginBtn');
+        const loginTenant = document.getElementById('loginTenant');
         const loginUser = document.getElementById('loginUser');
         const loginPass = document.getElementById('loginPass');
         const loginError = document.getElementById('loginError');
+
+        // Restore last tenant ID from localStorage
+        const LAST_TENANT_KEY = 'lostdogtracer_last_tenant';
+        const lastTenant = localStorage.getItem(LAST_TENANT_KEY);
+        if (lastTenant) loginTenant.value = lastTenant;
 
         // Check if already logged in
         FT_AUTH.isLoggedIn().then(valid => {
@@ -137,24 +149,31 @@
         loginBtn.addEventListener('click', doLogin);
         loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
         loginUser.addEventListener('keydown', e => { if (e.key === 'Enter') loginPass.focus(); });
+        loginTenant.addEventListener('keydown', e => { if (e.key === 'Enter') loginUser.focus(); });
 
         async function doLogin() {
             loginBtn.disabled = true;
             loginBtn.textContent = 'Wird geprüft…';
             loginError.style.display = 'none';
 
-            const token = await FT_AUTH.login(loginUser.value, loginPass.value);
+            const tenantId = loginTenant.value.trim();
+            if (!tenantId) {
+                loginError.textContent = 'Bitte Mandant (Tenant-ID) angeben';
+                loginError.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Anmelden';
+                return;
+            }
+
+            const token = await FT_AUTH.login(tenantId, loginUser.value, loginPass.value);
             if (token) {
-                // Reload page so nav.js picks up the new role
+                localStorage.setItem(LAST_TENANT_KEY, tenantId);
                 location.reload();
             } else {
-                // Show debug details if enabled in config
                 let debugMsg = '';
                 if (window.FT_CONFIG && window.FT_CONFIG.debugLogin) {
                     const detail = FT_AUTH.login._lastDebug || 'Unbekannt';
-                    const userLen = loginUser.value.length;
-                    const passLen = loginPass.value.length;
-                    debugMsg = `\n[Debug] ${detail} | User: ${userLen} Zeichen | Pass: ${passLen} Zeichen`;
+                    debugMsg = `\n[Debug] ${detail}`;
                 }
                 loginError.textContent = 'Benutzername oder Kennwort falsch' + debugMsg;
                 loginError.style.whiteSpace = 'pre-wrap';
@@ -167,30 +186,20 @@
         function showMenu() {
             loginSection.classList.add('hidden');
             menuSection.classList.remove('hidden');
-            // Hide menu cards based on role level
-            const level = FT_AUTH.getRoleLevel();
-            document.querySelectorAll('.menu-card[data-min-role]').forEach(card => {
-                const min = parseInt(card.dataset.minRole, 10);
-                if (level < min) card.style.display = 'none';
+            // Hide menu cards based on permissions
+            document.querySelectorAll('.menu-card[data-perm]').forEach(card => {
+                const perm = card.dataset.perm;
+                if (!FT_AUTH.hasPermission(perm)) card.style.display = 'none';
             });
-            // Hide feature-gated cards (may need to wait for config)
             applyFeatureFlags();
         }
 
         function applyFeatureFlags() {
             var cfg = window.FT_CONFIG;
             if (!cfg) {
-                // Try sessionStorage cache (set by theme.js)
-                try {
-                    var cached = sessionStorage.getItem('lostdogtracer_config');
-                    if (cached) cfg = JSON.parse(cached);
-                } catch {}
+                try { var cached = sessionStorage.getItem('lostdogtracer_config'); if (cached) cfg = JSON.parse(cached); } catch {}
             }
-            if (!cfg) {
-                // Config not loaded yet — retry
-                setTimeout(applyFeatureFlags, 300);
-                return;
-            }
+            if (!cfg) { setTimeout(applyFeatureFlags, 300); return; }
             if (cfg.featDeployment === false) document.querySelectorAll('[data-feat="deployment"]').forEach(function(el) { el.style.display = 'none'; });
             if (cfg.featEquipment === false) document.querySelectorAll('[data-feat="equipment"]').forEach(function(el) { el.style.display = 'none'; });
         }
